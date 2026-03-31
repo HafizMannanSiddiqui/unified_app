@@ -109,6 +109,7 @@ export default function MyTeam() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Select value={selectedTeam} onChange={setSelectedTeam} showSearch optionFilterProp="label"
             style={{ width: 250 }} placeholder="Select team..."
+            disabled={!user?.roles?.some((r: any) => ['super admin', 'Admin', 'Application Manager', 'Team Lead', 'Hr Manager'].includes(r.name))}
             options={(teams || []).map((t: any) => ({ label: `${t.teamName} (${(teamGroups.get(t.id) || []).length})`, value: t.id }))} />
           <span style={{ fontSize: 14, fontWeight: 600, color: '#154360' }}>
             {filteredMembers.length} member{filteredMembers.length !== 1 ? 's' : ''}

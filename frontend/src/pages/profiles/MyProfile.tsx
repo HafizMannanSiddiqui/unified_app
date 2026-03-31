@@ -243,7 +243,10 @@ export default function MyProfile() {
                   <Form.Item name="fatherName" label={L("Father's Name")}><Input /></Form.Item>
                   <Form.Item name="nationality" label={L('Nationality')}><Input /></Form.Item>
                   <Form.Item name="jobTitle" label={L('Job Title')}><Input /></Form.Item>
-                  <Form.Item name="dateOfJoining" label={L('Date of Joining')}><DatePicker style={{ width: '100%' }} format="DD MMM, YYYY" /></Form.Item>
+                  <Form.Item name="dateOfJoining" label={L('Date of Joining (HR only)')}>
+                    <DatePicker style={{ width: '100%' }} format="DD MMM, YYYY"
+                      disabled={!user?.roles?.some((r: any) => ['super admin', 'Admin', 'Hr Manager'].includes(r.name))} />
+                  </Form.Item>
                   <div className="full-width"><Form.Item name="currentAddress" label={L('Current Address')}><Input.TextArea rows={2} /></Form.Item></div>
                   <div className="full-width"><Form.Item name="permanentAddress" label={L('Permanent Address')}><Input.TextArea rows={2} /></Form.Item></div>
                   <Form.Item name="languages" label={L('Languages (comma sep)')}><Input /></Form.Item>
@@ -338,7 +341,8 @@ export default function MyProfile() {
             </Card>
           ),
         },
-        {
+        // Teams & Reporting — read-only for employees, editable for admins
+        ...(user?.roles?.some((r: any) => ['super admin', 'Admin', 'Hr Manager'].includes(r.name)) ? [{
           key: 'teams', label: 'Teams & Reporting', icon: <ApartmentOutlined />,
           children: (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
@@ -405,7 +409,7 @@ export default function MyProfile() {
               </Card>
             </div>
           ),
-        },
+        }] : []),
         {
           key: 'password', label: 'Reset Password', icon: <LockOutlined />,
           children: (
@@ -423,10 +427,11 @@ export default function MyProfile() {
             </Card>
           ),
         },
-        {
-          key: 'changes', label: 'Request Changes', icon: <SwapOutlined />,
+        // Request Changes — only for admins/HR
+        ...(user?.roles?.some((r: any) => ['super admin', 'Admin', 'Hr Manager'].includes(r.name)) ? [{
+          key: 'changes', label: 'Manage Changes', icon: <SwapOutlined />,
           children: <ProfileChangeTab userId={user?.id} />,
-        },
+        }] : []),
       ]} />
     </div>
   );

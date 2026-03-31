@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, Post, Query, Request, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Request, UseGuards, ParseIntPipe, ForbiddenException } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
+import { RolesGuard, Roles } from '../common/roles.guard';
 import { AttendanceService } from './attendance.service';
 import { ZktecoService } from './zkteco.service';
 
@@ -102,37 +103,49 @@ export class AttendanceController {
     return this.attendanceService.getMyTeam(req.user.id);
   }
 
-  // --- WFH ---
+  // --- WFH (leads/admins only) ---
   @Post('mark-wfh')
+  @UseGuards(RolesGuard)
+  @Roles('super admin', 'Admin', 'Application Manager', 'Team Lead', 'Hr Manager')
   markWfh(@Body() body: { userId: number; date: string }, @Request() req: any) {
     return this.attendanceService.markWfh(body.userId, body.date, req.user.id);
   }
 
-  // --- Person Detail for Admin ---
+  // --- Person Detail (leads/admins only) ---
   @Get('person-detail')
+  @UseGuards(RolesGuard)
+  @Roles('super admin', 'Admin', 'Application Manager', 'Team Lead', 'Hr Manager')
   async getPersonDetail(@Query('userId') userId: string, @Query('from') from: string, @Query('to') to: string) {
     return this.attendanceService.getPersonDetail(+userId, from, to);
   }
 
-  // --- Ghost Employees ---
+  // --- Ghost Employees (admin only) ---
   @Get('ghost-employees')
+  @UseGuards(RolesGuard)
+  @Roles('super admin', 'Admin', 'Application Manager')
   getGhostEmployees(@Query('months') months?: string) {
     return this.attendanceService.getGhostEmployees(months ? +months : 6);
   }
 
   @Post('deactivate-user')
+  @UseGuards(RolesGuard)
+  @Roles('super admin', 'Admin')
   deactivateUser(@Body() body: { userId: number }) {
     return this.attendanceService.deactivateUser(body.userId);
   }
 
-  // --- Team Lead Insights ---
+  // --- Team Lead Insights (leads/admins only) ---
   @Get('lead-insights')
+  @UseGuards(RolesGuard)
+  @Roles('super admin', 'Admin', 'Application Manager', 'Team Lead', 'Hr Manager')
   getLeadInsights(@Query('from') from: string, @Query('to') to: string, @Query('teamId') teamId?: string) {
     return this.attendanceService.getLeadInsights(from, to, teamId ? +teamId : undefined);
   }
 
-  // --- ZKTeco Device Operations ---
+  // --- ZKTeco Device Operations (admin only) ---
   @Post('zkteco/test-connection')
+  @UseGuards(RolesGuard)
+  @Roles('super admin', 'Admin')
   testConnection(@Body() body: { ip: string }) {
     return this.zktecoService.testConnection(body.ip);
   }

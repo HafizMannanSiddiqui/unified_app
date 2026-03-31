@@ -1,12 +1,21 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards, ParseIntPipe, Request, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards, ParseIntPipe, Request, Res, ForbiddenException } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
+import { RolesGuard, Roles } from '../common/roles.guard';
 import { GtlService } from './gtl.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { Response } from 'express';
+import { LEAD_ROLES } from '../common/ownership.helper';
 
 @Controller()
 @UseGuards(JwtAuthGuard)
 export class GtlController {
-  constructor(private gtl: GtlService) {}
+  constructor(private gtl: GtlService, private prisma: PrismaService) {}
+
+  // Helper: check if user is lead/admin
+  private async isLead(userId: number): Promise<boolean> {
+    const roles = await this.prisma.userHasRole.findMany({ where: { userId }, include: { role: true } });
+    return roles.some(r => LEAD_ROLES.includes(r.role.name));
+  }
 
   // --- Time Entries ---
   @Get('time-entries')
@@ -23,18 +32,31 @@ export class GtlController {
   createTimeEntry(@Body() body: any) { return this.gtl.createTimeEntry(body); }
 
   @Put('time-entries/:id')
-  updateTimeEntry(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
+  async updateTimeEntry(@Param('id', ParseIntPipe) id: number, @Body() body: any, @Request() req: any) {
+    // Only owner can update their own pending entries
+    const entry = await this.prisma.timeEntry.findUnique({ where: { id }, select: { userId: true, status: true } });
+    if (!entry) throw new ForbiddenException('Entry not found');
+    if (entry.userId !== req.user.id && !(await this.isLead(req.user.id))) throw new ForbiddenException('Not your entry');
+    if (entry.status !== 0) throw new ForbiddenException('Cannot edit approved/rejected entries');
     return this.gtl.updateTimeEntry(id, body);
   }
 
   @Delete('time-entries/:id')
-  deleteTimeEntry(@Param('id', ParseIntPipe) id: number) {
+  async deleteTimeEntry(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    const entry = await this.prisma.timeEntry.findUnique({ where: { id }, select: { userId: true, status: true } });
+    if (!entry) throw new ForbiddenException('Entry not found');
+    if (entry.userId !== req.user.id && !(await this.isLead(req.user.id))) throw new ForbiddenException('Not your entry');
+    if (entry.status !== 0) throw new ForbiddenException('Cannot delete approved/rejected entries');
     return this.gtl.deleteTimeEntry(id);
   }
 
-  // --- Timesheet Grouped by Week ---
+  // --- Timesheet Grouped by Week (ownership enforced) ---
   @Get('timesheet/grouped')
-  getTimesheetGrouped(@Query('userId') userId: string, @Query('year') year: string, @Query('month') month: string, @Query('programId') programId?: string) {
+  async getTimesheetGrouped(@Query('userId') userId: string, @Query('year') year: string, @Query('month') month: string, @Query('programId') programId?: string, @Request() req?: any) {
+    // Employees can only see their own timesheet
+    if (+userId !== req.user.id && !(await this.isLead(req.user.id))) {
+      throw new ForbiddenException('You can only view your own timesheet');
+    }
     return this.gtl.getTimesheetGrouped(+userId, +year || new Date().getFullYear(), +month || new Date().getMonth() + 1, programId ? +programId : undefined);
   }
 
@@ -51,17 +73,23 @@ export class GtlController {
 
   // --- Approvals ---
   @Post('approvals/:id/approve')
-  approve(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+  async approve(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    // Block self-approval
+    const entry = await this.prisma.timeEntry.findUnique({ where: { id }, select: { userId: true } });
+    if (entry?.userId === req.user.id) throw new ForbiddenException('Cannot approve your own entries');
     return this.gtl.approveEntry(id, req.user.id);
   }
 
   @Post('approvals/:id/reject')
-  reject(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+  async reject(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    const entry = await this.prisma.timeEntry.findUnique({ where: { id }, select: { userId: true } });
+    if (entry?.userId === req.user.id) throw new ForbiddenException('Cannot reject your own entries');
     return this.gtl.rejectEntry(id, req.user.id);
   }
 
   @Post('approvals/batch-approve')
-  batchApprove(@Body() body: { userId: number }, @Request() req: any) {
+  async batchApprove(@Body() body: { userId: number }, @Request() req: any) {
+    if (body.userId === req.user.id) throw new ForbiddenException('Cannot approve your own entries');
     return this.gtl.batchApprove(body.userId, req.user.id);
   }
 

@@ -81,8 +81,17 @@ export default function Dashboard() {
   const todayAtt = (myAttendance || []).find((a: any) => dayjs(a.checkinDate).format('YYYY-MM-DD') === now.format('YYYY-MM-DD'));
 
   // Filter team members by search
-  const filterUsers = (users: any[]) =>
-    search ? users.filter((u: any) => (u.displayName || u.username || '').toLowerCase().includes(search.toLowerCase())) : users;
+  // Employees see only their team, leads/admins see everyone
+  const filterUsers = (users: any[]) => {
+    let filtered = users;
+    if (!isLead && user?.teamId) {
+      filtered = filtered.filter((u: any) => u.teamId === user.teamId);
+    }
+    if (search) {
+      filtered = filtered.filter((u: any) => (u.displayName || u.username || '').toLowerCase().includes(search.toLowerCase()));
+    }
+    return filtered;
+  };
 
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>

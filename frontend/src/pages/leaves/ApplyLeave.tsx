@@ -36,7 +36,7 @@ export default function ApplyLeave() {
       <Card style={{ maxWidth: 500 }}>
         <Form form={form} onFinish={onFinish} layout="vertical">
           <Form.Item name="dateRange" label="Date Range" rules={[{ required: true }]}>
-            <RangePicker style={{ width: '100%' }} />
+            <RangePicker style={{ width: '100%' }} disabledDate={(current) => current && current.isBefore(dayjs(), 'day')} />
           </Form.Item>
           <Form.Item name="leaveType" label="Leave Type" rules={[{ required: true }]}>
             <Select options={[
