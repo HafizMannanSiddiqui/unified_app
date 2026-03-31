@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unified Portal — Entity Relationship Diagram</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; position: relative; }
+  h1 { text-align: center; color: #154360; font-size: 24px; margin-bottom: 4px; }
+  .sub { text-align: center; color: #666; margin-bottom: 20px; font-size: 13px; }
+
+  .legend { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px; font-size: 12px; }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .legend .dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+  #erd-container { position: relative; }
+  #lines-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+  #lines-svg line { stroke-width: 1.5; }
+  #lines-svg .fk-line { stroke: #bbb; stroke-dasharray: 5,4; }
+  #lines-svg .strong-line { stroke: #154360; stroke-width: 2; }
+  #lines-svg .one-to-one { stroke: #27ae60; stroke-width: 2; stroke-dasharray: 8,3; }
+  #lines-svg circle { fill: #154360; }
+
+  .section { margin-bottom: 28px; position: relative; z-index: 1; }
+  .section-title { font-size: 15px; font-weight: 700; color: #154360; margin-bottom: 10px; padding: 6px 14px; background: #e8eef3; border-radius: 6px; border-left: 4px solid #154360; }
+  .section-title.gtl { border-left-color: #e67e22; color: #e67e22; background: #fef5e7; }
+  .section-title.hrms { border-left-color: #2980b9; color: #2980b9; background: #eaf2f8; }
+  .section-title.junction { border-left-color: #8e44ad; color: #8e44ad; background: #f4ecf7; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+
+  .table-card { background: #fff; border-radius: 8px; border: 2px solid #154360; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.08); position: relative; z-index: 1; }
+  .table-card .t-name { background: #154360; color: #fff; padding: 7px 10px; font-weight: 700; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+  .table-card .t-name .cnt { opacity: 0.7; font-weight: 400; font-size: 11px; }
+  .table-card.hrms { border-color: #2980b9; }
+  .table-card.hrms .t-name { background: #2980b9; }
+  .table-card.gtl { border-color: #e67e22; }
+  .table-card.gtl .t-name { background: #e67e22; }
+  .table-card.junction { border-color: #8e44ad; }
+  .table-card.junction .t-name { background: #8e44ad; }
+
+  .cols { padding: 4px 0; }
+  .cols .col { padding: 3px 10px; font-size: 11.5px; display: flex; justify-content: space-between; border-bottom: 1px solid #f5f5f5; gap: 8px; }
+  .cols .col:last-child { border: none; }
+  .pk { color: #e74c3c; font-weight: 700; }
+  .fk { color: #2980b9; font-weight: 600; }
+  .type { color: #999; font-size: 10px; white-space: nowrap; }
+
+  .rel-section { margin-top: 24px; background: #fff; border-radius: 8px; padding: 16px 20px; border: 1px solid #e0e0e0; position: relative; z-index: 1; }
+  .rel-section h2 { font-size: 16px; color: #154360; margin-bottom: 10px; }
+  .rel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 6px; }
+  .rel-item { padding: 6px 10px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #154360; font-size: 12px; }
+  .rel-item .arrow { color: #e74c3c; font-weight: 700; }
+
+  @media (max-width: 768px) { body { padding: 10px; } .grid { grid-template-columns: 1fr; } .rel-grid { grid-template-columns: 1fr; } }
+  @media print { body { padding: 10px; } .section { break-inside: avoid; } #lines-svg { display: none; } }
+</style>
+</head><body>
+
+<h1>Unified Portal — Entity Relationship Diagram</h1>
+<p class="sub">PostgreSQL | 31 Tables | GTL + HRMS Merged | March 2026</p>
+
+<div class="legend">
+  <span><div class="dot" style="background:#154360"></div> Core</span>
+  <span><div class="dot" style="background:#e67e22"></div> GTL</span>
+  <span><div class="dot" style="background:#2980b9"></div> HRMS</span>
+  <span><div class="dot" style="background:#8e44ad"></div> Junction</span>
+  <span>── FK relation</span>
+  <span>━━ Strong relation</span>
+  <span style="color:#27ae60">╍╍ 1:1</span>
+</div>
+
+<div id="erd-container">
+<svg id="lines-svg"></svg>
+
+<!-- ═══ CORE ═══ -->
+<div class="section">
+  <div class="section-title">Core Tables</div>
+  <div class="grid">
+    <div class="table-card" id="tbl-users">
+      <div class="t-name">users <span class="cnt">783</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span>username</span><span class="type">varchar UNIQUE</span></div>
+        <div class="col"><span>display_name</span><span class="type">varchar</span></div>
+        <div class="col"><span>email</span><span class="type">varchar</span></div>
+        <div class="col"><span>password_hash</span><span class="type">argon2id</span></div>
+        <div class="col"><span class="fk">team_id</span><span class="type">FK → teams</span></div>
+        <div class="col"><span class="fk">designation_id</span><span class="type">FK → designations</span></div>
+        <div class="col"><span class="fk">report_to</span><span class="type">FK → users</span></div>
+        <div class="col"><span>payroll_company</span><span class="type">varchar</span></div>
+        <div class="col"><span>alias_info</span><span class="type">JSON</span></div>
+        <div class="col"><span>is_active</span><span class="type">bool</span></div>
+      </div>
+    </div>
+    <div class="table-card" id="tbl-teams">
+      <div class="t-name">teams <span class="cnt">29</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span>team_name</span><span class="type">varchar</span></div>
+        <div class="col"><span>legacy_team_id</span><span class="type">varchar</span></div>
+        <div class="col"><span>source_system</span><span class="type">varchar</span></div>
+        <div class="col"><span>is_active</span><span class="type">bool</span></div>
+      </div>
+    </div>
+    <div class="table-card" id="tbl-roles">
+      <div class="t-name">roles <span class="cnt">8</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span>name</span><span class="type">varchar UNIQUE</span></div>
+        <div class="col"><span>description</span><span class="type">text</span></div>
+      </div>
+    </div>
+    <div class="table-card" id="tbl-designations">
+      <div class="t-name">designations <span class="cnt">212</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span>name</span><span class="type">varchar</span></div>
+        <div class="col"><span class="fk">team_id</span><span class="type">FK → teams</span></div>
+      </div>
+    </div>
+    <div class="table-card" id="tbl-modules">
+      <div class="t-name">modules <span class="cnt">27</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span>name, slug</span><span class="type">varchar</span></div>
+        <div class="col"><span class="fk">parent_id</span><span class="type">FK → self</span></div>
+      </div>
+    </div>
+    <div class="table-card" id="tbl-settings">
+      <div class="t-name">settings <span class="cnt">3</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span>name</span><span class="type">varchar</span></div>
+        <div class="col"><span>value</span><span class="type">JSON</span></div>
+      </div>
+    </div>
+    <div class="table-card" id="tbl-holidays">
+      <div class="t-name">holidays <span class="cnt">22</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span>year</span><span class="type">smallint</span></div>
+        <div class="col"><span>from_date / to_date</span><span class="type">date</span></div>
+        <div class="col"><span>description</span><span class="type">text</span></div>
+      </div>
+    </div>
+    <div class="table-card" id="tbl-counters">
+      <div class="t-name">counters <span class="cnt">2</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span>module_name</span><span class="type">varchar</span></div>
+        <div class="col"><span>value</span><span class="type">int</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ JUNCTION ═══ -->
+<div class="section">
+  <div class="section-title junction">Junction Tables</div>
+  <div class="grid">
+    <div class="table-card junction" id="tbl-user_has_role">
+      <div class="t-name">user_has_role <span class="cnt">629</span></div>
+      <div class="cols">
+        <div class="col"><span class="fk">user_id</span><span class="type">FK → users</span></div>
+        <div class="col"><span class="fk">role_id</span><span class="type">FK → roles</span></div>
+      </div>
+    </div>
+    <div class="table-card junction" id="tbl-user_team_memberships">
+      <div class="t-name">user_team_memberships <span class="cnt">567</span></div>
+      <div class="cols">
+        <div class="col"><span class="fk">user_id</span><span class="type">FK → users</span></div>
+        <div class="col"><span class="fk">team_id</span><span class="type">FK → teams</span></div>
+        <div class="col"><span>role_in_team</span><span class="type">varchar</span></div>
+        <div class="col"><span>is_primary</span><span class="type">bool</span></div>
+      </div>
+    </div>
+    <div class="table-card junction" id="tbl-user_managers">
+      <div class="t-name">user_managers <span class="cnt">531</span></div>
+      <div class="cols">
+        <div class="col"><span class="fk">user_id</span><span class="type">FK → users</span></div>
+        <div class="col"><span class="fk">manager_id</span><span class="type">FK → users</span></div>
+        <div class="col"><span>is_primary</span><span class="type">bool</span></div>
+      </div>
+    </div>
+    <div class="table-card junction" id="tbl-role_has_permissions">
+      <div class="t-name">role_has_permissions <span class="cnt">250</span></div>
+      <div class="cols">
+        <div class="col"><span class="fk">role_id</span><span class="type">FK → roles</span></div>
+        <div class="col"><span class="fk">module_id</span><span class="type">FK → modules</span></div>
+        <div class="col"><span>task</span><span class="type">enum</span></div>
+        <div class="col"><span>permission</span><span class="type">bool</span></div>
+      </div>
+    </div>
+    <div class="table-card junction" id="tbl-module_permissions">
+      <div class="t-name">module_permissions <span class="cnt">100</span></div>
+      <div class="cols">
+        <div class="col"><span class="fk">module_id</span><span class="type">FK → modules</span></div>
+        <div class="col"><span>task</span><span class="type">enum</span></div>
+      </div>
+    </div>
+    <div class="table-card junction" id="tbl-team_sub_project">
+      <div class="t-name">team_sub_project_assign.</div>
+      <div class="cols">
+        <div class="col"><span class="fk">team_id</span><span class="type">FK → teams</span></div>
+        <div class="col"><span class="fk">sub_project_id</span><span class="type">FK → sub_projects</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HRMS ═══ -->
+<div class="section">
+  <div class="section-title hrms">HRMS — Attendance, Leaves & Profiles</div>
+  <div class="grid">
+    <div class="table-card hrms" id="tbl-attendance">
+      <div class="t-name">attendance <span class="cnt">102,657</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span class="fk">user_id</span><span class="type">FK → users</span></div>
+        <div class="col"><span>checkin_date / time</span><span class="type">date / time</span></div>
+        <div class="col"><span>checkout_date / time</span><span class="type">date / time</span></div>
+        <div class="col"><span>checkin_state</span><span class="type">enum</span></div>
+        <div class="col"><span>status</span><span class="type">smallint</span></div>
+      </div>
+    </div>
+    <div class="table-card hrms" id="tbl-att_requests">
+      <div class="t-name">attendance_requests <span class="cnt">6,315</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span class="fk">requester_id</span><span class="type">FK → users</span></div>
+        <div class="col"><span>attendance_type</span><span class="type">varchar</span></div>
+        <div class="col"><span>checkin/checkout</span><span class="type">date/time</span></div>
+        <div class="col"><span class="fk">approver_id</span><span class="type">FK → users</span></div>
+        <div class="col"><span>status</span><span class="type">smallint</span></div>
+      </div>
+    </div>
+    <div class="table-card hrms" id="tbl-att_images">
+      <div class="t-name">attendance_images <span class="cnt">6,475</span></div>
+      <div class="cols">
+        <div class="col"><span class="fk">user_id</span><span class="type">FK → users</span></div>
+        <div class="col"><span>attendance_date</span><span class="type">date</span></div>
+        <div class="col"><span>action</span><span class="type">enum</span></div>
+        <div class="col"><span>image_path</span><span class="type">varchar</span></div>
+      </div>
+    </div>
+    <div class="table-card hrms" id="tbl-leaves">
+      <div class="t-name">leaves <span class="cnt">1,071</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span class="fk">user_id</span><span class="type">FK → users</span></div>
+        <div class="col"><span>from_date / to_date</span><span class="type">date</span></div>
+        <div class="col"><span>leave_type</span><span class="type">enum</span></div>
+        <div class="col"><span>status</span><span class="type">enum</span></div>
+        <div class="col"><span class="fk">confirmed_by</span><span class="type">FK → users</span></div>
+      </div>
+    </div>
+    <div class="table-card hrms" id="tbl-weekend">
+      <div class="t-name">weekend_assignments <span class="cnt">14</span></div>
+      <div class="cols">
+        <div class="col"><span class="fk">user_id</span><span class="type">FK → users</span></div>
+        <div class="col"><span>weekend_date</span><span class="type">date</span></div>
+        <div class="col"><span class="fk">assigned_by</span><span class="type">FK → users</span></div>
+      </div>
+    </div>
+    <div class="table-card hrms" id="tbl-device_users">
+      <div class="t-name">device_users <span class="cnt">255</span></div>
+      <div class="cols">
+        <div class="col"><span>uid</span><span class="type">int</span></div>
+        <div class="col"><span class="fk">user_id</span><span class="type">FK → users (1:1)</span></div>
+        <div class="col"><span>card_no</span><span class="type">varchar</span></div>
+      </div>
+    </div>
+    <div class="table-card hrms" id="tbl-profiles">
+      <div class="t-name">profiles <span class="cnt">151</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span class="fk">user_id</span><span class="type">FK → users (1:1)</span></div>
+        <div class="col"><span>cnic, contact_no</span><span class="type">varchar</span></div>
+        <div class="col"><span>first/last name</span><span class="type">varchar</span></div>
+        <div class="col"><span>dob, date_of_joining</span><span class="type">date</span></div>
+        <div class="col"><span>blood_group</span><span class="type">varchar</span></div>
+      </div>
+    </div>
+    <div class="table-card hrms" id="tbl-profile_edu">
+      <div class="t-name">profile_education <span class="cnt">709</span></div>
+      <div class="cols">
+        <div class="col"><span class="fk">profile_id</span><span class="type">FK → profiles</span></div>
+        <div class="col"><span>examination, degree</span><span class="type">varchar</span></div>
+        <div class="col"><span>board, year</span><span class="type">varchar</span></div>
+      </div>
+    </div>
+    <div class="table-card hrms" id="tbl-profile_exp">
+      <div class="t-name">profile_experience <span class="cnt">253</span></div>
+      <div class="cols">
+        <div class="col"><span class="fk">profile_id</span><span class="type">FK → profiles</span></div>
+        <div class="col"><span>organization</span><span class="type">varchar</span></div>
+        <div class="col"><span>work_from / to</span><span class="type">date</span></div>
+      </div>
+    </div>
+    <div class="table-card hrms" id="tbl-profile_visas">
+      <div class="t-name">profile_visas <span class="cnt">16</span></div>
+      <div class="cols">
+        <div class="col"><span class="fk">profile_id</span><span class="type">FK → profiles</span></div>
+        <div class="col"><span>visa_country</span><span class="type">varchar</span></div>
+        <div class="col"><span>visa_expiry</span><span class="type">date</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ GTL ═══ -->
+<div class="section">
+  <div class="section-title gtl">GTL — Time Logging & Projects</div>
+  <div class="grid">
+    <div class="table-card gtl" id="tbl-time_entries">
+      <div class="t-name">time_entries <span class="cnt">118,145</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span class="fk">user_id</span><span class="type">FK → users</span></div>
+        <div class="col"><span class="fk">program_id</span><span class="type">FK → programs</span></div>
+        <div class="col"><span class="fk">team_id</span><span class="type">FK → teams</span></div>
+        <div class="col"><span class="fk">project_id</span><span class="type">FK → projects</span></div>
+        <div class="col"><span class="fk">sub_project_id</span><span class="type">FK → sub_projects</span></div>
+        <div class="col"><span class="fk">wbs_id</span><span class="type">FK → wbs</span></div>
+        <div class="col"><span>entry_date</span><span class="type">date</span></div>
+        <div class="col"><span>hours</span><span class="type">decimal(5,2)</span></div>
+        <div class="col"><span>status</span><span class="type">smallint</span></div>
+        <div class="col"><span class="fk">approver_id</span><span class="type">FK → users</span></div>
+      </div>
+    </div>
+    <div class="table-card gtl" id="tbl-programs">
+      <div class="t-name">programs <span class="cnt">2</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span>program_name</span><span class="type">varchar</span></div>
+      </div>
+    </div>
+    <div class="table-card gtl" id="tbl-projects">
+      <div class="t-name">projects <span class="cnt">11</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span class="fk">program_id</span><span class="type">FK → programs</span></div>
+        <div class="col"><span>project_name</span><span class="type">varchar</span></div>
+      </div>
+    </div>
+    <div class="table-card gtl" id="tbl-sub_projects">
+      <div class="t-name">sub_projects <span class="cnt">18</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span class="fk">program_id</span><span class="type">FK → programs</span></div>
+        <div class="col"><span class="fk">project_id</span><span class="type">FK → projects</span></div>
+        <div class="col"><span>sub_project_name</span><span class="type">varchar</span></div>
+      </div>
+    </div>
+    <div class="table-card gtl" id="tbl-wbs">
+      <div class="t-name">wbs <span class="cnt">23</span></div>
+      <div class="cols">
+        <div class="col"><span class="pk">id</span><span class="type">PK int</span></div>
+        <div class="col"><span>description</span><span class="type">varchar</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ RELATIONSHIPS ═══ -->
+<div class="rel-section">
+  <h2>All Relationships (22 foreign keys)</h2>
+  <div class="rel-grid">
+    <div class="rel-item">users.<span class="fk">team_id</span> <span class="arrow">→</span> teams.id (N:1)</div>
+    <div class="rel-item">users.<span class="fk">designation_id</span> <span class="arrow">→</span> designations.id (N:1)</div>
+    <div class="rel-item">users.<span class="fk">report_to</span> <span class="arrow">→</span> users.id (self-ref)</div>
+    <div class="rel-item">user_has_role <span class="arrow">→</span> users + roles (M:N)</div>
+    <div class="rel-item">user_team_memberships <span class="arrow">→</span> users + teams (M:N)</div>
+    <div class="rel-item">user_managers <span class="arrow">→</span> users + users (M:N)</div>
+    <div class="rel-item">role_has_permissions <span class="arrow">→</span> roles + modules (M:N)</div>
+    <div class="rel-item">profiles.<span class="fk">user_id</span> <span class="arrow">→</span> users.id (1:1)</div>
+    <div class="rel-item">device_users.<span class="fk">user_id</span> <span class="arrow">→</span> users.id (1:1)</div>
+    <div class="rel-item">attendance.<span class="fk">user_id</span> <span class="arrow">→</span> users.id (N:1)</div>
+    <div class="rel-item">leaves.<span class="fk">user_id</span> <span class="arrow">→</span> users.id (N:1)</div>
+    <div class="rel-item">leaves.<span class="fk">confirmed_by</span> <span class="arrow">→</span> users.id</div>
+    <div class="rel-item">att_requests.<span class="fk">requester_id</span> <span class="arrow">→</span> users.id</div>
+    <div class="rel-item">att_requests.<span class="fk">approver_id</span> <span class="arrow">→</span> users.id</div>
+    <div class="rel-item">weekend_assign.<span class="fk">user_id</span> <span class="arrow">→</span> users.id</div>
+    <div class="rel-item">weekend_assign.<span class="fk">assigned_by</span> <span class="arrow">→</span> users.id</div>
+    <div class="rel-item">profile_education.<span class="fk">profile_id</span> <span class="arrow">→</span> profiles.id</div>
+    <div class="rel-item">profile_experience.<span class="fk">profile_id</span> <span class="arrow">→</span> profiles.id</div>
+    <div class="rel-item">profile_visas.<span class="fk">profile_id</span> <span class="arrow">→</span> profiles.id</div>
+    <div class="rel-item">time_entries <span class="arrow">→</span> users, programs, projects, sub_projects, wbs, teams</div>
+    <div class="rel-item">projects.<span class="fk">program_id</span> <span class="arrow">→</span> programs.id</div>
+    <div class="rel-item">sub_projects <span class="arrow">→</span> programs + projects</div>
+  </div>
+</div>
+
+</div><!-- /erd-container -->
+
+<div style="text-align:center; margin-top:20px; color:#999; font-size:11px;">
+  Unified Portal ERD | March 2026 | Ctrl+P to save as PDF
+</div>
+
+<!-- JavaScript: Draw connecting lines between cards -->
+<script>
+function getCenter(el) {
+  const r = el.getBoundingClientRect();
+  const cr = document.getElementById('erd-container').getBoundingClientRect();
+  return { x: r.left + r.width / 2 - cr.left, y: r.top + r.height / 2 - cr.top };
+}
+
+function drawLines() {
+  const svg = document.getElementById('lines-svg');
+  const container = document.getElementById('erd-container');
+  svg.setAttribute('width', container.scrollWidth);
+  svg.setAttribute('height', container.scrollHeight);
+  svg.innerHTML = '';
+
+  const relations = [
+    // [from, to, class]
+    ['tbl-users', 'tbl-teams', 'strong-line'],
+    ['tbl-users', 'tbl-designations', 'fk-line'],
+    ['tbl-users', 'tbl-profiles', 'one-to-one'],
+    ['tbl-users', 'tbl-device_users', 'one-to-one'],
+    ['tbl-users', 'tbl-attendance', 'strong-line'],
+    ['tbl-users', 'tbl-time_entries', 'strong-line'],
+    ['tbl-users', 'tbl-leaves', 'fk-line'],
+    ['tbl-users', 'tbl-att_requests', 'fk-line'],
+    ['tbl-users', 'tbl-att_images', 'fk-line'],
+    ['tbl-users', 'tbl-weekend', 'fk-line'],
+    ['tbl-users', 'tbl-user_has_role', 'fk-line'],
+    ['tbl-users', 'tbl-user_team_memberships', 'fk-line'],
+    ['tbl-users', 'tbl-user_managers', 'fk-line'],
+    ['tbl-roles', 'tbl-user_has_role', 'fk-line'],
+    ['tbl-roles', 'tbl-role_has_permissions', 'fk-line'],
+    ['tbl-teams', 'tbl-user_team_memberships', 'fk-line'],
+    ['tbl-teams', 'tbl-designations', 'fk-line'],
+    ['tbl-modules', 'tbl-role_has_permissions', 'fk-line'],
+    ['tbl-modules', 'tbl-module_permissions', 'fk-line'],
+    ['tbl-profiles', 'tbl-profile_edu', 'strong-line'],
+    ['tbl-profiles', 'tbl-profile_exp', 'strong-line'],
+    ['tbl-profiles', 'tbl-profile_visas', 'strong-line'],
+    ['tbl-programs', 'tbl-projects', 'strong-line'],
+    ['tbl-projects', 'tbl-sub_projects', 'strong-line'],
+    ['tbl-time_entries', 'tbl-programs', 'fk-line'],
+    ['tbl-time_entries', 'tbl-projects', 'fk-line'],
+    ['tbl-time_entries', 'tbl-sub_projects', 'fk-line'],
+    ['tbl-time_entries', 'tbl-wbs', 'fk-line'],
+    ['tbl-teams', 'tbl-team_sub_project', 'fk-line'],
+  ];
+
+  for (const [fromId, toId, cls] of relations) {
+    const fromEl = document.getElementById(fromId);
+    const toEl = document.getElementById(toId);
+    if (!fromEl || !toEl) continue;
+
+    const from = getCenter(fromEl);
+    const to = getCenter(toEl);
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', from.x);
+    line.setAttribute('y1', from.y);
+    line.setAttribute('x2', to.x);
+    line.setAttribute('y2', to.y);
+    line.setAttribute('class', cls);
+    svg.appendChild(line);
+
+    // Small dot at the "to" end
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.setAttribute('cx', to.x);
+    dot.setAttribute('cy', to.y);
+    dot.setAttribute('r', '3');
+    svg.appendChild(dot);
+  }
+}
+
+window.addEventListener('load', drawLines);
+window.addEventListener('resize', drawLines);
+</script>
+
+</body></html>

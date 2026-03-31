@@ -1,0 +1,849 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum ProductPhase {
+  production
+  rnd
+
+  @@map("product_phase_enum")
+}
+
+enum LeaveType {
+  casual_leave
+  earned_leave
+  sick_leave
+
+  @@map("leave_type_enum")
+}
+
+enum LeaveStatus {
+  pending
+  approved
+  rejected
+
+  @@map("leave_status_enum")
+}
+
+enum AttendanceState {
+  manual
+  rfid
+  auto
+
+  @@map("attendance_state_enum")
+}
+
+enum AttendanceAction {
+  checkin
+  checkout
+
+  @@map("attendance_action_enum")
+}
+
+enum AttendanceType {
+  full_day
+  half_day
+
+  @@map("attendance_type_enum")
+}
+
+enum ModuleTask {
+  View
+  Add
+  Edit
+  Delete
+
+  @@map("module_task_enum")
+}
+
+enum ProfileRecordType {
+  education
+  certification
+
+  @@map("profile_record_type_enum")
+}
+
+// ============================================================================
+// TABLE 1: teams
+// ============================================================================
+
+model Team {
+  id            Int      @id @default(autoincrement())
+  teamName      String   @map("team_name") @db.VarChar(255)
+  legacyTeamId  String?  @map("legacy_team_id") @db.VarChar(100)
+  sourceSystem  String?  @map("source_system") @db.VarChar(10)
+  displayOrder  Int      @default(0) @map("display_order")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  users                    User[]                    @relation("UserTeam")
+  designations             Designation[]
+  timeEntries              TimeEntry[]
+  teamSubProjectAssignments TeamSubProjectAssignment[]
+  memberships              UserTeamMembership[]      @relation("TeamMemberships")
+
+  @@index([legacyTeamId])
+  @@index([isActive])
+  @@map("teams")
+}
+
+// ============================================================================
+// TABLE 2: roles
+// ============================================================================
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(100)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdBy   String?  @map("created_by") @db.VarChar(100)
+  updatedBy   String?  @map("updated_by") @db.VarChar(100)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  permissions RoleHasPermission[]
+  userRoles   UserHasRole[]
+
+  @@map("roles")
+}
+
+// ============================================================================
+// TABLE 3: modules (self-referential)
+// ============================================================================
+
+model Module {
+  id        Int      @id @default(autoincrement())
+  parentId  Int?     @map("parent_id")
+  name      String   @db.VarChar(100)
+  slug      String   @unique @db.VarChar(100)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdBy String?  @map("created_by") @db.VarChar(100)
+  updatedBy String?  @map("updated_by") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  parent            Module?             @relation("ModuleParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children          Module[]            @relation("ModuleParent")
+  modulePermissions ModulePermission[]
+  rolePermissions   RoleHasPermission[]
+
+  @@index([parentId])
+  @@index([slug])
+  @@map("modules")
+}
+
+// ============================================================================
+// TABLE 4: programs
+// ============================================================================
+
+model Program {
+  id              Int      @id @default(autoincrement())
+  legacyProgramId String?  @map("legacy_program_id") @db.VarChar(20)
+  programName     String   @map("program_name") @db.VarChar(500)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  projects    Project[]
+  subProjects SubProject[]
+  timeEntries TimeEntry[]
+
+  @@index([legacyProgramId])
+  @@index([isActive])
+  @@map("programs")
+}
+
+// ============================================================================
+// TABLE 5: wbs
+// ============================================================================
+
+model Wbs {
+  id          Int      @id @default(autoincrement())
+  legacyWbsId Int?     @map("legacy_wbs_id")
+  description String   @db.VarChar(255)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  timeEntries TimeEntry[]
+
+  @@index([legacyWbsId])
+  @@map("wbs")
+}
+
+// ============================================================================
+// TABLE 6: holidays
+// ============================================================================
+
+model Holiday {
+  id           Int      @id @default(autoincrement())
+  year         Int      @db.SmallInt
+  fromDate     DateTime @map("from_date") @db.Date
+  toDate       DateTime @map("to_date") @db.Date
+  numberOfDays Int      @map("number_of_days")
+  description  String?  @db.Text
+  isValid      Boolean  @default(true) @map("is_valid")
+  createdBy    String?  @map("created_by") @db.VarChar(100)
+  updatedBy    String?  @map("updated_by") @db.VarChar(100)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  @@index([year])
+  @@map("holidays")
+}
+
+// ============================================================================
+// TABLE 7: settings
+// ============================================================================
+
+model Setting {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(255)
+  displayName String?  @map("display_name") @db.VarChar(200)
+  description String?  @db.Text
+  value       Json?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  @@map("settings")
+}
+
+// ============================================================================
+// TABLE 8: designations
+// ============================================================================
+
+model Designation {
+  id        Int      @id @default(autoincrement())
+  teamId    Int?     @map("team_id")
+  name      String   @db.VarChar(200)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdBy String?  @map("created_by") @db.VarChar(100)
+  updatedBy String?  @map("updated_by") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  team  Team?  @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  users User[]
+
+  @@index([teamId])
+  @@map("designations")
+}
+
+// ============================================================================
+// TABLE 9: projects
+// ============================================================================
+
+model Project {
+  id              Int      @id @default(autoincrement())
+  programId       Int      @map("program_id")
+  legacyProjectId String?  @map("legacy_project_id") @db.VarChar(100)
+  projectName     String   @map("project_name") @db.VarChar(255)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  program     Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
+  subProjects SubProject[]
+  timeEntries TimeEntry[]
+
+  @@index([programId])
+  @@index([legacyProjectId])
+  @@index([isActive])
+  @@map("projects")
+}
+
+// ============================================================================
+// TABLE 10: sub_projects
+// ============================================================================
+
+model SubProject {
+  id                   Int      @id @default(autoincrement())
+  programId            Int      @map("program_id")
+  projectId            Int?     @map("project_id")
+  legacySubProjectId   String?  @map("legacy_sub_project_id") @db.VarChar(100)
+  subProjectName       String   @map("sub_project_name") @db.VarChar(255)
+  isActive             Boolean  @default(true) @map("is_active")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  program         Program                  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  project         Project?                 @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  teamAssignments TeamSubProjectAssignment[]
+  timeEntries     TimeEntry[]
+
+  @@index([programId])
+  @@index([projectId])
+  @@index([legacySubProjectId])
+  @@map("sub_projects")
+}
+
+// ============================================================================
+// TABLE 11: team_sub_project_assignments (junction)
+// ============================================================================
+
+model TeamSubProjectAssignment {
+  id           Int      @id @default(autoincrement())
+  teamId       Int      @map("team_id")
+  subProjectId Int      @map("sub_project_id")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  team       Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  subProject SubProject @relation(fields: [subProjectId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, subProjectId])
+  @@index([teamId])
+  @@index([subProjectId])
+  @@map("team_sub_project_assignments")
+}
+
+// ============================================================================
+// TABLE 12: users (unified GTL + HRMS)
+// ============================================================================
+
+model User {
+  id                 Int      @id @default(autoincrement())
+  username           String   @unique @db.VarChar(100)
+  email              String?  @db.VarChar(255)
+  displayName        String?  @map("display_name") @db.VarChar(200)
+  firstName          String?  @map("first_name") @db.VarChar(100)
+  lastName           String?  @map("last_name") @db.VarChar(100)
+  passwordHash       String   @default("not-set") @map("password_hash") @db.VarChar(255)
+  legacyPasswordMd5  String?  @map("legacy_password_md5") @db.VarChar(64)
+  teamId             Int?     @map("team_id")
+  designationId      Int?     @map("designation_id")
+  reportTo           Int?     @map("report_to")
+  payrollCompany     String?  @map("payroll_company") @db.VarChar(100)
+  aliasInfo          Json?    @map("alias_info")
+  zkId               Int?     @map("zk_id")
+  cardNo             String?  @map("card_no") @db.VarChar(50)
+  isActive           Boolean  @default(true) @map("is_active")
+  resetLinkToken     String?  @map("reset_link_token") @db.VarChar(255)
+  createdBy          String?  @map("created_by") @db.VarChar(100)
+  updatedBy          String?  @map("updated_by") @db.VarChar(100)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  team        Team?        @relation("UserTeam", fields: [teamId], references: [id], onDelete: SetNull)
+  designation Designation? @relation(fields: [designationId], references: [id], onDelete: SetNull)
+  manager     User?        @relation("UserManager", fields: [reportTo], references: [id], onDelete: SetNull)
+  subordinates User[]      @relation("UserManager")
+
+  roles               UserHasRole[]
+  timeEntries         TimeEntry[]         @relation("TimeEntryUser")
+  approvedEntries     TimeEntry[]         @relation("TimeEntryApprover")
+  attendances         Attendance[]        @relation("AttendanceUser")
+  attendanceRequests  AttendanceRequest[] @relation("AttReqRequester")
+  approvedRequests    AttendanceRequest[] @relation("AttReqApprover")
+  attendanceImages    AttendanceImage[]
+  leaves              Leave[]             @relation("LeaveUser")
+  confirmedLeaves     Leave[]             @relation("LeaveConfirmer")
+  weekendAssignments  WeekendAssignment[] @relation("WAUser")
+  assignedWeekends    WeekendAssignment[] @relation("WAAssigner")
+  profile             Profile?
+  deviceUser          DeviceUser?
+  teamMemberships     UserTeamMembership[]
+  myManagers          UserManager[]       @relation("UserManagers")
+  managedUsers        UserManager[]       @relation("ManagedUsers")
+  profileChangeRequests  ProfileChangeRequest[] @relation("ProfileChangeUser")
+  reviewedChangeRequests ProfileChangeRequest[] @relation("ProfileChangeReviewer")
+
+  @@index([username])
+  @@index([email])
+  @@index([teamId])
+  @@index([designationId])
+  @@index([reportTo])
+  @@index([isActive])
+  @@index([payrollCompany])
+  @@map("users")
+}
+
+// ============================================================================
+// TABLE 13: module_permissions
+// ============================================================================
+
+model ModulePermission {
+  id       Int        @id @default(autoincrement())
+  moduleId Int        @map("module_id")
+  task     ModuleTask
+  isActive Boolean    @default(true) @map("is_active")
+
+  // Relations
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([moduleId, task])
+  @@index([moduleId])
+  @@map("module_permissions")
+}
+
+// ============================================================================
+// TABLE 14: role_has_permissions
+// ============================================================================
+
+model RoleHasPermission {
+  id         Int        @id @default(autoincrement())
+  roleId     Int        @map("role_id")
+  moduleId   Int        @map("module_id")
+  task       ModuleTask
+  permission Boolean    @default(false)
+  createdBy  Int?       @map("created_by")
+  updatedBy  Int?       @map("updated_by")
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime   @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, moduleId, task])
+  @@index([roleId])
+  @@index([moduleId])
+  @@map("role_has_permissions")
+}
+
+// ============================================================================
+// TABLE 15: user_has_role
+// ============================================================================
+
+model UserHasRole {
+  id     Int @id @default(autoincrement())
+  userId Int @map("user_id")
+  roleId Int @map("role_id")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_has_role")
+}
+
+// ============================================================================
+// TABLE 16: time_entries (GTL main table)
+// ============================================================================
+
+model TimeEntry {
+  id           Int           @id @default(autoincrement())
+  userId       Int           @map("user_id")
+  programId    Int           @map("program_id")
+  teamId       Int?          @map("team_id")
+  projectId    Int?          @map("project_id")
+  subProjectId Int?          @map("sub_project_id")
+  workType     Int           @map("work_type")
+  productPhase ProductPhase? @map("product_phase")
+  entryDate    DateTime      @map("entry_date") @db.Date
+  description  String?       @db.Text
+  wbsId        Int?          @map("wbs_id")
+  hours        Decimal       @db.Decimal(5, 2)
+  approverId   Int?          @map("approver_id")
+  status       Int           @default(0) @db.SmallInt
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime      @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user       User        @relation("TimeEntryUser", fields: [userId], references: [id], onDelete: Cascade)
+  program    Program     @relation(fields: [programId], references: [id], onDelete: Restrict)
+  team       Team?       @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  project    Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  subProject SubProject? @relation(fields: [subProjectId], references: [id], onDelete: SetNull)
+  wbs        Wbs?        @relation(fields: [wbsId], references: [id], onDelete: SetNull)
+  approver   User?       @relation("TimeEntryApprover", fields: [approverId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entryDate])
+  @@index([userId, entryDate])
+  @@index([programId])
+  @@index([projectId])
+  @@index([teamId])
+  @@index([approverId])
+  @@index([status])
+  @@map("time_entries")
+}
+
+// ============================================================================
+// TABLE 17: attendance
+// ============================================================================
+
+model Attendance {
+  id               Int              @id @default(autoincrement())
+  userId           Int              @map("user_id")
+  checkinDate      DateTime?        @map("checkin_date") @db.Date
+  checkinTime      DateTime?        @map("checkin_time") @db.Time()
+  checkoutDate     DateTime?        @map("checkout_date") @db.Date
+  checkoutTime     DateTime?        @map("checkout_time") @db.Time()
+  status           Int              @default(1) @db.SmallInt
+  checkinState     AttendanceState  @default(manual) @map("checkin_state")
+  checkoutState    AttendanceState? @map("checkout_state")
+  checkinIp        String?          @map("checkin_ip") @db.VarChar(45)
+  checkinHostname  String?          @map("checkin_hostname") @db.VarChar(255)
+  checkoutIp       String?          @map("checkout_ip") @db.VarChar(45)
+  checkoutHostname String?          @map("checkout_hostname") @db.VarChar(255)
+  createdBy        Int?             @map("created_by")
+  updatedBy        Int?             @map("updated_by")
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime         @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user User @relation("AttendanceUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([checkinDate])
+  @@index([userId, checkinDate])
+  @@index([status])
+  @@map("attendance")
+}
+
+// ============================================================================
+// TABLE 18: attendance_requests
+// ============================================================================
+
+model AttendanceRequest {
+  id                Int      @id @default(autoincrement())
+  requesterId       Int      @map("requester_id")
+  attendanceType    String   @map("attendance_type") @db.VarChar(50)
+  checkinDate       DateTime? @map("checkin_date") @db.Date
+  checkinTime       DateTime? @map("checkin_time") @db.Time()
+  checkoutDate      DateTime? @map("checkout_date") @db.Date
+  checkoutTime      DateTime? @map("checkout_time") @db.Time()
+  description       String?  @db.Text
+  approverId        Int?     @map("approver_id")
+  status            Int      @default(1) @db.SmallInt
+  requesterIp       String?  @map("requester_ip") @db.VarChar(45)
+  requesterHostname String?  @map("requester_hostname") @db.VarChar(255)
+  approverIp        String?  @map("approver_ip") @db.VarChar(45)
+  approverHostname  String?  @map("approver_hostname") @db.VarChar(255)
+  createdBy         Int?     @map("created_by")
+  updatedBy         Int?     @map("updated_by")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  requester User  @relation("AttReqRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  approver  User? @relation("AttReqApprover", fields: [approverId], references: [id], onDelete: SetNull)
+
+  @@index([requesterId])
+  @@index([approverId])
+  @@index([status])
+  @@index([checkinDate])
+  @@map("attendance_requests")
+}
+
+// ============================================================================
+// TABLE 19: attendance_images
+// ============================================================================
+
+model AttendanceImage {
+  id             Int              @id @default(autoincrement())
+  userId         Int              @map("user_id")
+  attendanceDate DateTime         @map("attendance_date") @db.Date
+  action         AttendanceAction
+  imagePath      String           @map("image_path") @db.VarChar(500)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([attendanceDate])
+  @@index([userId, attendanceDate])
+  @@map("attendance_images")
+}
+
+// ============================================================================
+// TABLE 20: leaves
+// ============================================================================
+
+model Leave {
+  id           Int         @id @default(autoincrement())
+  userId       Int         @map("user_id")
+  fromDate     DateTime    @map("from_date") @db.Date
+  toDate       DateTime    @map("to_date") @db.Date
+  numberOfDays Int         @map("number_of_days")
+  leaveType    LeaveType   @map("leave_type")
+  description  String?     @db.Text
+  confirmedBy  Int?        @map("confirmed_by")
+  status       LeaveStatus @default(pending)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime    @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user      User  @relation("LeaveUser", fields: [userId], references: [id], onDelete: Cascade)
+  confirmer User? @relation("LeaveConfirmer", fields: [confirmedBy], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([fromDate, toDate])
+  @@index([status])
+  @@index([userId, status])
+  @@index([confirmedBy])
+  @@map("leaves")
+}
+
+// ============================================================================
+// TABLE 21: weekend_assignments
+// ============================================================================
+
+model WeekendAssignment {
+  id             Int            @id @default(autoincrement())
+  userId         Int            @map("user_id")
+  weekendDate    DateTime       @map("weekend_date") @db.Date
+  weekendNumber  Int            @map("weekend_number") @db.SmallInt
+  year           Int            @db.SmallInt
+  attendanceType AttendanceType @map("attendance_type")
+  assignedBy     Int            @map("assigned_by")
+  assignedAt     DateTime       @default(now()) @map("assigned_at") @db.Timestamptz
+  status         Int            @default(1) @db.SmallInt
+  deletedBy      Int?           @map("deleted_by")
+
+  // Relations
+  user     User @relation("WAUser", fields: [userId], references: [id], onDelete: Cascade)
+  assigner User @relation("WAAssigner", fields: [assignedBy], references: [id], onDelete: Restrict)
+
+  @@unique([userId, weekendDate])
+  @@index([userId])
+  @@index([weekendDate])
+  @@index([assignedBy])
+  @@index([year])
+  @@map("weekend_assignments")
+}
+
+// ============================================================================
+// TABLE 22: profiles (1:1 with users)
+// ============================================================================
+
+model Profile {
+  id                Int      @id @default(autoincrement())
+  userId            Int      @unique @map("user_id")
+  cnic              String?  @unique @db.VarChar(20)
+  firstName         String?  @map("first_name") @db.VarChar(100)
+  lastName          String?  @map("last_name") @db.VarChar(100)
+  fatherName        String?  @map("father_name") @db.VarChar(100)
+  fatherOccupation  String?  @map("father_occupation") @db.VarChar(100)
+  motherOccupation  String?  @map("mother_occupation") @db.VarChar(100)
+  contactNo         String?  @map("contact_no") @db.VarChar(20)
+  personalEmail     String?  @map("personal_email") @db.VarChar(200)
+  dob               DateTime? @db.Date
+  maritalStatus     String?  @map("marital_status") @db.VarChar(50)
+  nationality       String?  @default("Pakistani") @db.VarChar(50)
+  bloodGroup        String?  @map("blood_group") @db.VarChar(10)
+  passportStatus    String?  @default("no") @map("passport_status") @db.VarChar(10)
+  passportNo        String?  @map("passport_no") @db.VarChar(50)
+  passportExpiry    DateTime? @map("passport_expiry") @db.Date
+  internationalTour Boolean  @default(false) @map("international_tour")
+  visitedCountries  String[] @map("visited_countries")
+  currentAddress    String?  @map("current_address") @db.Text
+  permanentAddress  String?  @map("permanent_address") @db.Text
+  careerObjectives  String?  @map("career_objectives") @db.Text
+  jobTitle          String?  @map("job_title") @db.VarChar(100)
+  dfJob             String?  @map("df_job") @db.VarChar(100)
+  sittingLocation   String?  @map("sitting_location") @db.VarChar(100)
+  passion           String?  @db.VarChar(255)
+  siblings          Int?     @default(0) @db.SmallInt
+  dependents        Int?     @default(0) @db.SmallInt
+  languages         String[]
+  hobbies           String[]
+  dateOfJoining     DateTime? @map("date_of_joining") @db.Date
+  house             String?  @db.VarChar(100)
+  vehicle           String?  @db.VarChar(100)
+  picturePath       String?  @map("picture_path") @db.VarChar(500)
+  isActive          Boolean  @default(true) @map("is_active")
+  updatedBy         Int?     @map("updated_by")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  education  ProfileEducation[]
+  experience ProfileExperience[]
+  visas      ProfileVisa[]
+
+  @@index([userId])
+  @@index([cnic])
+  @@index([bloodGroup])
+  @@map("profiles")
+}
+
+// ============================================================================
+// TABLE 23: profile_education
+// ============================================================================
+
+model ProfileEducation {
+  id          Int               @id @default(autoincrement())
+  profileId   Int               @map("profile_id")
+  recordType  ProfileRecordType @map("record_type")
+  examination String?           @db.VarChar(200)
+  degree      String?           @db.VarChar(200)
+  board       String?           @db.VarChar(200)
+  passingYear String?           @map("passing_year") @db.VarChar(10)
+  percentage  String?           @db.VarChar(20)
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime          @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("profile_education")
+}
+
+// ============================================================================
+// TABLE 24: profile_experience
+// ============================================================================
+
+model ProfileExperience {
+  id           Int       @id @default(autoincrement())
+  profileId    Int       @map("profile_id")
+  organization String?   @db.VarChar(200)
+  designation  String?   @db.VarChar(200)
+  jobRole      String?   @map("job_role") @db.VarChar(200)
+  workFrom     DateTime? @map("work_from") @db.Date
+  workTo       DateTime? @map("work_to") @db.Date
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("profile_experience")
+}
+
+// ============================================================================
+// TABLE 25: profile_visas
+// ============================================================================
+
+model ProfileVisa {
+  id          Int       @id @default(autoincrement())
+  profileId   Int       @map("profile_id")
+  visaCountry String?   @map("visa_country") @db.VarChar(100)
+  visaExpiry  DateTime? @map("visa_expiry") @db.Date
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+
+  // Relations
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("profile_visas")
+}
+
+// ============================================================================
+// TABLE 26: device_users (1:1 with users)
+// ============================================================================
+
+model DeviceUser {
+  id     Int    @id @default(autoincrement())
+  uid    Int
+  userId Int    @unique @map("user_id")
+  name   String? @db.VarChar(255)
+  role   Int    @default(0) @db.SmallInt
+  cardNo String? @map("card_no") @db.VarChar(255)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("device_users")
+}
+
+// ============================================================================
+// TABLE 27: counters
+// ============================================================================
+
+model Counter {
+  id         Int      @id @default(autoincrement())
+  moduleName String   @unique @map("module_name") @db.VarChar(100)
+  value      Int      @default(0)
+  createdBy  Int?     @map("created_by")
+  updatedBy  Int?     @map("updated_by")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  @@map("counters")
+}
+
+// ============================================================================
+// TABLE 28: user_team_memberships (many-to-many: user ↔ team)
+// ============================================================================
+
+model UserTeamMembership {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  teamId    Int      @map("team_id")
+  roleInTeam String? @map("role_in_team") @db.VarChar(100)
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation("TeamMemberships", fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@index([userId])
+  @@index([teamId])
+  @@map("user_team_memberships")
+}
+
+// ============================================================================
+// TABLE 29: user_managers (many-to-many: user ↔ manager)
+// ============================================================================
+
+model UserManager {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  managerId Int      @map("manager_id")
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user    User @relation("UserManagers", fields: [userId], references: [id], onDelete: Cascade)
+  manager User @relation("ManagedUsers", fields: [managerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, managerId])
+  @@index([userId])
+  @@index([managerId])
+  @@map("user_managers")
+}
+
+// ============================================================================
+// TABLE 30: profile_change_requests (employee requests, lead approves)
+// ============================================================================
+
+model ProfileChangeRequest {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  fieldName   String   @map("field_name") @db.VarChar(50)
+  oldValue    String?  @map("old_value") @db.VarChar(500)
+  newValue    String   @map("new_value") @db.VarChar(500)
+  status      Int      @default(0) @db.SmallInt // 0=pending, 1=approved, 2=rejected
+  reviewedBy  Int?     @map("reviewed_by")
+  reviewedAt  DateTime? @map("reviewed_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user     User  @relation("ProfileChangeUser", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer User? @relation("ProfileChangeReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@map("profile_change_requests")
+}

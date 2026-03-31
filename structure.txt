@@ -1,0 +1,328 @@
+================================================================================
+ UNIFIED APP (GTL + HRMS) — Project Structure & Developer Guide
+================================================================================
+
+PREREQUISITES (install once on any machine):
+  - Python 3.12          → https://www.python.org/downloads/  (check "Add to PATH")
+  - Node.js 18+          → https://nodejs.org/
+  - PostgreSQL 16        → https://www.postgresql.org/download/windows/
+                           Set password: postgres | Port: 5432
+
+NOTE: Python 3.14 is NOT supported yet (packages lack wheels). Use 3.12.
+
+================================================================================
+ QUICK START — 2 commands, that's it
+================================================================================
+
+  FIRST TIME SETUP (one time per machine):
+     > cd backend
+     > pip install -r requirements.txt
+     > alembic revision --autogenerate -m "initial"
+     > alembic upgrade head
+
+  EVERY TIME YOU WANT TO RUN:
+     > cd frontend
+     > npm run dev
+
+     This single command:
+       ✓ Auto-installs node_modules if missing
+       ✓ Starts backend  (FastAPI)  → http://localhost:8000
+       ✓ Starts frontend (React)    → http://localhost:5173
+       ✓ Vite proxies /api/* to backend (no CORS issues)
+       ✓ API docs at http://localhost:8000/docs
+
+  MIGRATE OLD DATA (one time, after tables exist):
+     > cd migration
+     > pip install pymysql psycopg2-binary
+     > python migrate_data.py
+
+================================================================================
+ PROJECT STRUCTURE
+================================================================================
+
+unified_app/
+│
+├── structure.txt                  ← You are here
+│
+├── backend/                       ← FastAPI + SQLAlchemy + PostgreSQL
+│   ├── main.py                    ← Entry point: python main.py (runs uvicorn)
+│   ├── config.py                  ← All settings from .env (DB, JWT, SMTP, etc.)
+│   ├── database.py                ← Async SQLAlchemy engine + get_db dependency
+│   ├── requirements.txt           ← pip install -r requirements.txt
+│   ├── .env                       ← Environment config (DB password, JWT secret)
+│   ├── .env.example               ← Template for .env
+│   ├── alembic.ini                ← Alembic config (points to DB URL)
+│   │
+│   ├── alembic/                   ← Database migrations
+│   │   ├── env.py                 ← Loads all models for autogenerate
+│   │   ├── script.py.mako         ← Migration file template
+│   │   └── versions/              ← Generated migration files go here
+│   │
+│   ├── models/                    ← SQLAlchemy ORM models (1 file per table)
+│   │   ├── __init__.py            ← Exports all models
+│   │   ├── base.py                ← DeclarativeBase + TimestampMixin
+│   │   ├── user.py                ← Unified users (merged GTL + HRMS)
+│   │   ├── team.py                ← Teams
+│   │   ├── designation.py         ← Job designations
+│   │   ├── role.py                ← RBAC: Role, Module, ModulePermission,
+│   │   │                             RoleHasPermission, UserHasRole
+│   │   ├── program.py             ← GTL: Programs
+│   │   ├── project.py             ← GTL: Projects
+│   │   ├── sub_project.py         ← GTL: SubProjects + TeamSubProjectAssignment
+│   │   ├── wbs.py                 ← GTL: Work Breakdown Structure
+│   │   ├── time_entry.py          ← GTL: Time entries (was `data` table)
+│   │   ├── attendance.py          ← HRMS: Attendance, AttendanceRequest,
+│   │   │                             AttendanceImage
+│   │   ├── leave.py               ← HRMS: Leaves
+│   │   ├── holiday.py             ← HRMS: Holidays
+│   │   ├── weekend_assignment.py  ← HRMS: Weekend work assignments
+│   │   ├── profile.py             ← HRMS: Profile, ProfileEducation,
+│   │   │                             ProfileExperience, ProfileVisa
+│   │   ├── device_user.py         ← HRMS: ZKTeco biometric device users
+│   │   ├── setting.py             ← App settings (device IPs, configs)
+│   │   └── counter.py             ← Counters (allowed leaves, project IDs)
+│   │
+│   ├── auth/                      ← Authentication module
+│   │   ├── router.py              ← POST /auth/login, GET /auth/me, POST /auth/logout
+│   │   ├── service.py             ← JWT create/decode, bcrypt hash/verify, MD5 fallback
+│   │   ├── dependencies.py        ← get_current_user, require_permission(module, task)
+│   │   └── schemas.py             ← LoginRequest, TokenResponse, CurrentUserOut
+│   │
+│   ├── users/                     ← User management
+│   │   ├── router.py              ← GET/POST /users, GET/PUT /users/{id}
+│   │   ├── service.py             ← CRUD logic with role assignment
+│   │   └── schemas.py             ← UserCreate, UserUpdate, UserOut
+│   │
+│   ├── teams/                     ← Team management
+│   │   ├── router.py              ← GET/POST /teams, GET/PUT /teams/{id}
+│   │   ├── service.py             ← CRUD logic
+│   │   └── schemas.py             ← TeamCreate, TeamUpdate, TeamOut
+│   │
+│   ├── roles/                     ← RBAC management
+│   │   ├── router.py              ← CRUD /roles, GET /roles/modules,
+│   │   │                             GET/PUT /roles/{id}/permissions
+│   │   └── schemas.py             ← RoleCreate, RoleOut, ModuleOut, PermissionUpdate
+│   │
+│   ├── gtl/                       ← Time Logger module (Phase 2)
+│   │   ├── __init__.py
+│   │   ├── timesheets/            ← GET /timesheets with filters
+│   │   ├── approvals/             ← POST /approvals/{id}/approve|reject
+│   │   └── reports/               ← GET /gtl/reports/resource|project|team
+│   │
+│   ├── attendance/                ← Attendance module (Phase 3)
+│   │   └── __init__.py            ← POST /attendance/checkin|checkout, CRUD requests
+│   │
+│   ├── leaves/                    ← Leave module (Phase 3)
+│   │   └── __init__.py            ← CRUD /leaves, approve/reject, GET /balance
+│   │
+│   ├── profiles/                  ← Profile module (Phase 4)
+│   │   └── __init__.py            ← CRUD /profiles (nested edu/exp/visa)
+│   │
+│   ├── designations/              ← Designation CRUD (Phase 4)
+│   ├── holidays/                  ← Holiday CRUD (Phase 3)
+│   ├── weekends/                  ← Weekend assignment CRUD (Phase 3)
+│   ├── biometric/                 ← ZKTeco integration (Phase 5)
+│   ├── reports/                   ← HRMS reports (Phase 4)
+│   ├── notifications/             ← Email notifications (Phase 5)
+│   │
+│   └── common/                    ← Shared utilities
+│       ├── pagination.py          ← PaginationParams + PaginatedResponse
+│       └── exceptions.py          ← NotFoundError, PermissionDeniedError
+│
+├── frontend/                      ← React + TypeScript + Vite + Ant Design
+│   ├── package.json               ← npm install && npm run dev
+│   ├── tsconfig.json
+│   ├── vite.config.ts             ← Dev proxy: /api → localhost:8000
+│   ├── index.html
+│   │
+│   └── src/
+│       ├── main.tsx               ← ReactDOM entry
+│       ├── App.tsx                 ← Routes + QueryClient + ThemeProvider
+│       ├── vite-env.d.ts
+│       │
+│       ├── api/                   ← Axios API calls
+│       │   ├── client.ts          ← Axios instance + JWT interceptor
+│       │   └── auth.ts            ← login(), getMe(), logout()
+│       │
+│       ├── store/
+│       │   └── authStore.ts       ← Zustand: token, user, setAuth, clearAuth
+│       │
+│       ├── hooks/
+│       │   ├── useAuth.ts         ← login/logout/isAuthenticated hook
+│       │   └── usePermission.ts   ← hasPermission(module, task) hook
+│       │
+│       ├── types/
+│       │   └── index.ts           ← All TypeScript interfaces
+│       │
+│       ├── theme/
+│       │   └── companyThemes.ts   ← Multi-tenant colors (PS19/VT/RT/AS)
+│       │
+│       ├── components/
+│       │   ├── layout/
+│       │   │   ├── AppLayout.tsx   ← Sidebar + Header + Content shell
+│       │   │   ├── Sidebar.tsx     ← Full nav: GTL + HRMS + Admin
+│       │   │   └── Header.tsx      ← User dropdown + logout
+│       │   └── common/
+│       │       └── ProtectedRoute.tsx ← Auth + permission route guard
+│       │
+│       └── pages/
+│           ├── auth/
+│           │   └── Login.tsx       ← Login form
+│           └── dashboard/
+│               └── Dashboard.tsx   ← Unified dashboard with widgets
+│
+└── migration/
+    └── migrate_data.py            ← One-time MySQL → PostgreSQL data migration
+
+================================================================================
+ DATABASE — 27 TABLES, FULL RELATIONSHIP MAP
+================================================================================
+
+  See backend/schema.sql for complete CREATE TABLE statements with comments.
+
+  RELATIONSHIP DIAGRAM:
+  ─────────────────────
+
+    teams ◄──┬── users ◄──┬── user_has_role ──► roles
+             │     │       │                      │
+             │     │(self) │                      ▼
+             │     └─report_to            role_has_permissions
+             │     │                              │
+             │     ▼                              ▼
+             └── designations    modules ◄── module_permissions
+
+    programs ◄── projects ◄── sub_projects ◄── team_sub_project_assignments ──► teams
+
+    users ◄──┬── time_entries ──► programs, projects, sub_projects, wbs, teams
+             ├── attendance
+             ├── attendance_requests (requester + approver → users)
+             ├── attendance_images
+             ├── leaves (user + confirmed_by → users)
+             ├── weekend_assignments (user + assigned_by → users)
+             ├── profiles ◄──┬── profile_education
+             │               ├── profile_experience
+             │               └── profile_visas
+             └── device_users
+
+  ALL FOREIGN KEYS:
+  ─────────────────
+    users.team_id              → teams.id
+    users.designation_id       → designations.id
+    users.report_to            → users.id (self)
+    designations.team_id       → teams.id
+    projects.program_id        → programs.id
+    sub_projects.program_id    → programs.id
+    sub_projects.project_id    → projects.id
+    team_sub_project_assignments.team_id → teams.id
+    team_sub_project_assignments.sub_project_id → sub_projects.id
+    module_permissions.module_id → modules.id
+    role_has_permissions.role_id → roles.id
+    role_has_permissions.module_id → modules.id
+    user_has_role.user_id      → users.id
+    user_has_role.role_id      → roles.id
+    time_entries.user_id       → users.id
+    time_entries.program_id    → programs.id
+    time_entries.team_id       → teams.id
+    time_entries.project_id    → projects.id
+    time_entries.sub_project_id → sub_projects.id
+    time_entries.wbs_id        → wbs.id
+    time_entries.approver_id   → users.id
+    attendance.user_id         → users.id
+    attendance_requests.requester_id → users.id
+    attendance_requests.approver_id  → users.id
+    attendance_images.user_id  → users.id
+    leaves.user_id             → users.id
+    leaves.confirmed_by        → users.id
+    weekend_assignments.user_id → users.id
+    weekend_assignments.assigned_by → users.id
+    profiles.user_id           → users.id (1:1 unique)
+    profile_education.profile_id → profiles.id (cascade)
+    profile_experience.profile_id → profiles.id (cascade)
+    profile_visas.profile_id   → profiles.id (cascade)
+    device_users.user_id       → users.id (1:1 unique)
+    counters.created_by        → users.id
+
+  OLD SYSTEM PROBLEMS FIXED:
+  ──────────────────────────
+    ✗ GTL data.user_id was VARCHAR "46"          → ✓ INTEGER FK to users
+    ✗ GTL data.approver was VARCHAR "andy.cash"   → ✓ INTEGER FK to users
+    ✗ GTL team_id was VARCHAR "TM_0002"           → ✓ INTEGER FK to teams
+    ✗ HRMS attendance.username was VARCHAR string  → ✓ INTEGER FK to users
+    ✗ HRMS profiles linked by CNIC string          → ✓ INTEGER FK profiles.user_id
+    ✗ No foreign key constraints anywhere          → ✓ Full FK with ON DELETE rules
+    ✗ No indexes                                   → ✓ Indexes on all FKs + query filters
+    ✗ MD5 passwords                                → ✓ bcrypt (MD5 fallback for migration)
+
+================================================================================
+ API ENDPOINTS
+================================================================================
+
+  AUTH:
+    POST   /auth/login               ← Returns JWT token
+    GET    /auth/me                   ← Current user + roles + permissions
+    POST   /auth/logout
+
+  USERS:
+    GET    /users                     ← List (paginated, filterable)
+    POST   /users                     ← Create
+    GET    /users/{id}                ← Get one
+    PUT    /users/{id}                ← Update
+
+  TEAMS:
+    GET    /teams                     ← List all
+    POST   /teams                     ← Create
+    PUT    /teams/{id}                ← Update
+
+  ROLES:
+    GET    /roles                     ← List roles
+    POST   /roles                     ← Create role
+    PUT    /roles/{id}                ← Update role
+    GET    /roles/modules             ← List all modules
+    GET    /roles/{id}/permissions    ← Get permission matrix for role
+    PUT    /roles/{id}/permissions    ← Update permission matrix
+
+  (Phase 2+)
+    CRUD   /time-entries, /programs, /projects, /sub-projects
+    GET    /timesheets
+    POST   /approvals/{id}/approve|reject
+    POST   /attendance/checkin|checkout
+    CRUD   /attendance-requests
+    CRUD   /leaves + /leaves/{id}/approve|reject + GET /leaves/balance
+    CRUD   /holidays, /designations, /weekend-assignments
+    CRUD   /profiles (nested education/experience/visa)
+    GET    /reports/*
+
+================================================================================
+ KEY DESIGN DECISIONS
+================================================================================
+
+  1. PASSWORD MIGRATION: Old MD5 hashes stored in legacy_password_md5.
+     On first login: validates MD5 → hashes plaintext to bcrypt → clears MD5.
+     No forced password reset needed.
+
+  2. TEAM ID CONFLICT: GTL TM_0002="Electrical", HRMS TM_0002="Assembly Line".
+     Both imported with source_system tag. Need manual reconciliation.
+
+  3. STRING → INT FK: All old varchar IDs (TM_0002, PXP02, etc.) converted
+     to integer foreign keys. Legacy IDs kept in legacy_* columns for reference.
+
+  4. RBAC: Adopted HRMS model (roles → modules → tasks → permissions).
+     GTL features added as new modules. Super admin bypasses all checks.
+
+  5. MULTI-TENANT: Company detected from user.payroll_company.
+     Frontend theme changes color per company (PS19/VT/RT/AS).
+
+  6. CORS / PROXY: In dev, Vite proxies /api/* → backend:8000 (no CORS needed).
+     In production, FastAPI CORS middleware handles cross-origin requests.
+     Frontend always calls /api/auth/login etc. — Vite strips /api prefix.
+
+================================================================================
+ TECH STACK
+================================================================================
+
+  Backend:   Python 3.12 | FastAPI | SQLAlchemy 2.0 (async) | Alembic | PostgreSQL
+  Frontend:  React 18 | TypeScript | Vite | Ant Design 5 | TanStack Query | Zustand
+  Auth:      JWT (python-jose) | bcrypt (passlib)
+  Reports:   openpyxl (Excel) | reportlab (PDF)
+
+================================================================================

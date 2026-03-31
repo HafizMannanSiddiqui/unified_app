@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Feature Comparison</title>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #fff; padding: 40px; max-width: 1100px; margin: 0 auto; }
+  h1 { color: #154360; text-align: center; margin-bottom: 8px; }
+  .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+  th { background: #154360; color: #fff; padding: 10px 14px; text-align: left; font-size: 14px; }
+  td { padding: 8px 14px; font-size: 13px; border-bottom: 1px solid #e8e8e8; }
+  tr:nth-child(even) td { background: #f8f9fa; }
+  .yes { color: #27ae60; font-weight: 700; }
+  .no { color: #e74c3c; font-weight: 700; }
+  .new { color: #2980b9; font-weight: 700; }
+  .section-row td { background: #EBF5FB !important; font-weight: 700; color: #154360; font-size: 14px; }
+</style></head><body>
+<h1>Feature Comparison — Old vs New</h1>
+<p class="subtitle">Old GTL (PHP) + Old HRMS (PHP) → Unified Portal (React + NestJS)</p>
+
+<table>
+  <tr><th>Feature</th><th>Old GTL</th><th>Old HRMS</th><th>New Unified App</th><th>Enhancement</th></tr>
+  <tr class="section-row"><td colspan="5">GTL — Time Logging</td></tr>
+  <tr><td>Time Sheet (weekly groups)</td><td class="yes">✓</td><td class="no">✗</td><td class="yes">✓</td><td>Edit/delete inline, CSV download</td></tr>
+  <tr><td>Data Entry (two-column form)</td><td class="yes">✓</td><td class="no">✗</td><td class="yes">✓</td><td>Searchable dropdowns, cascading</td></tr>
+  <tr><td>Time Sheet Approval</td><td class="yes">✓</td><td class="no">✗</td><td class="yes">✓</td><td>Per-entry + batch approve/reject</td></tr>
+  <tr><td>Team Report</td><td class="yes">✓</td><td class="no">✗</td><td class="yes">✓</td><td>Server-side filtering</td></tr>
+  <tr><td>General Report</td><td class="yes">✓</td><td class="no">✗</td><td class="yes">✓</td><td>Download Approved/Unapproved/Both CSV</td></tr>
+  <tr><td>Resource Allocation</td><td class="yes">✓</td><td class="no">✗</td><td class="yes">✓</td><td>Resource + Project heatmaps</td></tr>
+
+  <tr class="section-row"><td colspan="5">HRMS — Attendance</td></tr>
+  <tr><td>AMS Dashboard (who's in office)</td><td class="no">✗</td><td class="yes">✓</td><td class="yes">✓</td><td>Search, auto-refresh, stats cards</td></tr>
+  <tr><td>Public Board (no login)</td><td class="no">✗</td><td class="yes">✓</td><td class="yes">✓</td><td>/board route</td></tr>
+  <tr><td>Check In / Out</td><td class="no">✗</td><td class="yes">✓</td><td class="yes">✓</td><td>Live timer, duplicate prevention</td></tr>
+  <tr><td>My Attendance (monthly)</td><td class="no">✗</td><td class="yes">✓</td><td class="yes">✓</td><td>Seconds, cross-midnight, OT tags</td></tr>
+  <tr><td>Attendance Requests</td><td class="no">✗</td><td class="yes">✓</td><td class="yes">✓</td><td>Admin approve/reject view</td></tr>
+  <tr><td>Weekend Assignments</td><td class="no">✗</td><td class="yes">✓</td><td class="yes">✓</td><td>Lead can assign/delete</td></tr>
+  <tr><td>Holidays Calendar</td><td class="no">✗</td><td class="yes">✓</td><td class="yes">✓</td><td>Pakistani calendar 2025-2026</td></tr>
+
+  <tr class="section-row"><td colspan="5">HRMS — People</td></tr>
+  <tr><td>Personal Profile (editable)</td><td class="no">✗</td><td class="yes">✓</td><td class="yes">✓</td><td>Profile completion %, tabs</td></tr>
+  <tr><td>Education / Experience / Visa</td><td class="no">✗</td><td class="yes">✓</td><td class="yes">✓</td><td>Add/Delete CRUD from profile</td></tr>
+  <tr><td>My Leaves + Apply</td><td class="no">✗</td><td class="yes">✓</td><td class="yes">✓</td><td>Balance tracking</td></tr>
+  <tr><td>Employees Report</td><td class="no">✗</td><td class="yes">✓</td><td class="yes">✓</td><td>Missed checkout column, CSV</td></tr>
+  <tr><td>Blood Group Report</td><td class="no">✗</td><td class="yes">✓</td><td class="yes">✓</td><td>Card-based grouped layout</td></tr>
+  <tr><td>Reset Password</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td>Inside profile tab</td></tr>
+
+  <tr class="section-row"><td colspan="5">NEW FEATURES (not in old systems)</td></tr>
+  <tr><td>Profile Completion %</td><td class="no">✗</td><td class="no">✗</td><td class="new">NEW</td><td>Circular progress, 16 fields tracked</td></tr>
+  <tr><td>Live Attendance Timer</td><td class="no">✗</td><td class="no">✗</td><td class="new">NEW</td><td>Real-time ticking clock when checked in</td></tr>
+  <tr><td>Anti-Gaming (12h cap)</td><td class="no">✗</td><td class="no">✗</td><td class="new">NEW</td><td>Suspicious flags, auto-close, capped averages</td></tr>
+  <tr><td>Overtime Detection</td><td class="no">✗</td><td class="no">✗</td><td class="new">NEW</td><td>OT tag for 9-12h, color-coded</td></tr>
+  <tr><td>Multi-Team Support</td><td class="no">✗</td><td class="no">✗</td><td class="new">NEW</td><td>Users in multiple teams with roles</td></tr>
+  <tr><td>Multi-Manager Reporting</td><td class="no">✗</td><td class="no">✗</td><td class="new">NEW</td><td>Report to multiple leads</td></tr>
+  <tr><td>My Team Page</td><td class="no">✗</td><td class="no">✗</td><td class="new">NEW</td><td>See team, managers, subordinates with live attendance</td></tr>
+  <tr><td>Contact Directory</td><td class="no">✗</td><td class="no">✗</td><td class="new">NEW</td><td>Searchable employee directory</td></tr>
+  <tr><td>Late Arrival Report</td><td class="no">✗</td><td class="no">✗</td><td class="new">NEW</td><td>Admin report, team filter</td></tr>
+  <tr><td>Auto Auth Refresh</td><td class="no">✗</td><td class="no">✗</td><td class="new">NEW</td><td>No re-login for permission changes</td></tr>
+  <tr><td>Argon2id Password Hashing</td><td class="no">✗</td><td class="no">✗</td><td class="new">NEW</td><td>Auto-upgrade from MD5</td></tr>
+</table>
+</body></html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Database Architecture</title>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; padding: 40px; }
+  h1 { color: #154360; text-align: center; font-size: 28px; margin-bottom: 30px; }
+  .subtitle { text-align: center; color: #666; margin-bottom: 40px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 1200px; margin: 0 auto; }
+  .table-card { background: #fff; border-radius: 8px; border: 2px solid #154360; overflow: hidden; }
+  .table-card .name { background: #154360; color: #fff; padding: 8px 12px; font-weight: 700; font-size: 14px; display: flex; justify-content: space-between; }
+  .table-card .name .count { opacity: 0.7; font-weight: 400; }
+  .table-card .cols { padding: 8px 12px; font-size: 12px; }
+  .table-card .cols div { padding: 2px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; }
+  .table-card .cols .pk { color: #e74c3c; font-weight: 600; }
+  .table-card .cols .fk { color: #2980b9; }
+  .section { grid-column: 1 / -1; background: #154360; color: #fff; padding: 8px 16px; border-radius: 6px; font-weight: 700; font-size: 16px; margin-top: 10px; }
+  .relations { max-width: 1200px; margin: 30px auto; background: #fff; border-radius: 8px; padding: 20px; }
+  .relations h2 { color: #154360; margin-bottom: 12px; }
+  .rel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 13px; }
+  .rel-item { padding: 6px 10px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #154360; }
+</style></head><body>
+<h1>Unified Portal — Database Architecture</h1>
+<p class="subtitle">PostgreSQL 15 | 29 Tables | 43 Foreign Key Constraints</p>
+
+<div class="grid">
+  <div class="section">CORE TABLES</div>
+
+  <div class="table-card"><div class="name">users <span class="count">783 rows</span></div><div class="cols">
+    <div><span class="pk">id PK</span> <span>int</span></div>
+    <div>username <span>varchar(100) UNIQUE</span></div>
+    <div>display_name <span>varchar(200)</span></div>
+    <div>email <span>varchar(255)</span></div>
+    <div>password_hash <span>varchar(255)</span></div>
+    <div><span class="fk">team_id FK</span> <span>→ teams</span></div>
+    <div><span class="fk">designation_id FK</span> <span>→ designations</span></div>
+    <div><span class="fk">report_to FK</span> <span>→ users</span></div>
+    <div>payroll_company <span>varchar(100)</span></div>
+    <div>alias_info <span>JSON</span></div>
+    <div>is_active <span>boolean</span></div>
+  </div></div>
+
+  <div class="table-card"><div class="name">teams <span class="count">29 rows</span></div><div class="cols">
+    <div><span class="pk">id PK</span> <span>int</span></div>
+    <div>team_name <span>varchar(255)</span></div>
+    <div>legacy_team_id <span>varchar(100)</span></div>
+    <div>display_order <span>int</span></div>
+  </div></div>
+
+  <div class="table-card"><div class="name">roles <span class="count">8 rows</span></div><div class="cols">
+    <div><span class="pk">id PK</span> <span>int</span></div>
+    <div>name <span>varchar(100) UNIQUE</span></div>
+    <div>description <span>text</span></div>
+  </div></div>
+
+  <div class="table-card"><div class="name">designations <span class="count">212 rows</span></div><div class="cols">
+    <div><span class="pk">id PK</span> <span>int</span></div>
+    <div>name <span>varchar(200)</span></div>
+    <div><span class="fk">team_id FK</span> <span>→ teams</span></div>
+  </div></div>
+
+  <div class="section">GTL — TIME LOGGING</div>
+
+  <div class="table-card"><div class="name">time_entries <span class="count">118,145 rows</span></div><div class="cols">
+    <div><span class="pk">id PK</span> <span>int</span></div>
+    <div><span class="fk">user_id FK</span> <span>→ users</span></div>
+    <div><span class="fk">program_id FK</span> <span>→ programs</span></div>
+    <div><span class="fk">project_id FK</span> <span>→ projects</span></div>
+    <div><span class="fk">sub_project_id FK</span> <span>→ sub_projects</span></div>
+    <div><span class="fk">wbs_id FK</span> <span>→ wbs</span></div>
+    <div>entry_date <span>date</span></div>
+    <div>hours <span>decimal(5,2)</span></div>
+    <div>status <span>smallint (0/1/2)</span></div>
+    <div><span class="fk">approver_id FK</span> <span>→ users</span></div>
+  </div></div>
+
+  <div class="table-card"><div class="name">programs <span class="count">2 rows</span></div><div class="cols">
+    <div><span class="pk">id PK</span> <span>int</span></div>
+    <div>program_name <span>varchar(500)</span></div>
+    <div>legacy_program_id <span>varchar(20)</span></div>
+  </div></div>
+
+  <div class="table-card"><div class="name">projects <span class="count">11 rows</span></div><div class="cols">
+    <div><span class="pk">id PK</span> <span>int</span></div>
+    <div><span class="fk">program_id FK</span> <span>→ programs</span></div>
+    <div>project_name <span>varchar(255)</span></div>
+  </div></div>
+
+  <div class="table-card"><div class="name">sub_projects <span class="count">18 rows</span></div><div class="cols">
+    <div><span class="pk">id PK</span> <span>int</span></div>
+    <div><span class="fk">program_id FK</span> <span>→ programs</span></div>
+    <div><span class="fk">project_id FK</span> <span>→ projects</span></div>
+    <div>sub_project_name <span>varchar(255)</span></div>
+  </div></div>
+
+  <div class="section">HRMS — ATTENDANCE & LEAVES</div>
+
+  <div class="table-card"><div class="name">attendance <span class="count">102,657 rows</span></div><div class="cols">
+    <div><span class="pk">id PK</span> <span>int</span></div>
+    <div><span class="fk">user_id FK</span> <span>→ users</span></div>
+    <div>checkin_date <span>date</span></div>
+    <div>checkin_time <span>time</span></div>
+    <div>checkout_date <span>date</span></div>
+    <div>checkout_time <span>time</span></div>
+    <div>checkin_state <span>enum (manual/rfid/auto)</span></div>
+    <div>status <span>smallint</span></div>
+  </div></div>
+
+  <div class="table-card"><div class="name">leaves <span class="count">1,071 rows</span></div><div class="cols">
+    <div><span class="pk">id PK</span> <span>int</span></div>
+    <div><span class="fk">user_id FK</span> <span>→ users</span></div>
+    <div>from_date / to_date <span>date</span></div>
+    <div>leave_type <span>enum</span></div>
+    <div>status <span>enum (pending/approved/rejected)</span></div>
+  </div></div>
+
+  <div class="table-card"><div class="name">attendance_requests <span class="count">6,315 rows</span></div><div class="cols">
+    <div><span class="pk">id PK</span> <span>int</span></div>
+    <div><span class="fk">requester_id FK</span> <span>→ users</span></div>
+    <div><span class="fk">approver_id FK</span> <span>→ users</span></div>
+    <div>checkin_date/time <span>date/time</span></div>
+    <div>checkout_date/time <span>date/time</span></div>
+    <div>status <span>smallint</span></div>
+  </div></div>
+
+  <div class="table-card"><div class="name">holidays <span class="count">22 rows</span></div><div class="cols">
+    <div><span class="pk">id PK</span> <span>int</span></div>
+    <div>year <span>smallint</span></div>
+    <div>from_date / to_date <span>date</span></div>
+    <div>description <span>text</span></div>
+  </div></div>
+
+  <div class="section">PROFILES & JUNCTION TABLES</div>
+
+  <div class="table-card"><div class="name">profiles <span class="count">151 rows</span></div><div class="cols">
+    <div><span class="pk">id PK</span> <span>int</span></div>
+    <div><span class="fk">user_id FK</span> <span>→ users (1:1)</span></div>
+    <div>cnic, contact_no, dob <span>various</span></div>
+    <div>blood_group <span>varchar(10)</span></div>
+    <div>date_of_joining <span>date</span></div>
+  </div></div>
+
+  <div class="table-card"><div class="name">profile_education <span class="count">709 rows</span></div><div class="cols">
+    <div><span class="fk">profile_id FK</span> <span>→ profiles</span></div>
+    <div>examination, degree <span>varchar</span></div>
+    <div>board, passing_year <span>varchar</span></div>
+  </div></div>
+
+  <div class="table-card"><div class="name">user_team_memberships <span class="count">567 rows</span></div><div class="cols">
+    <div><span class="fk">user_id FK</span> <span>→ users</span></div>
+    <div><span class="fk">team_id FK</span> <span>→ teams</span></div>
+    <div>role_in_team <span>varchar(100)</span></div>
+    <div>is_primary <span>boolean</span></div>
+  </div></div>
+
+  <div class="table-card"><div class="name">user_managers <span class="count">531 rows</span></div><div class="cols">
+    <div><span class="fk">user_id FK</span> <span>→ users</span></div>
+    <div><span class="fk">manager_id FK</span> <span>→ users</span></div>
+    <div>is_primary <span>boolean</span></div>
+  </div></div>
+</div>
+
+<div class="relations">
+  <h2>Key Relationships</h2>
+  <div class="rel-grid">
+    <div class="rel-item">users ↔ teams (M:N via user_team_memberships)</div>
+    <div class="rel-item">users ↔ managers (M:N via user_managers)</div>
+    <div class="rel-item">users ↔ roles (M:N via user_has_role)</div>
+    <div class="rel-item">users → time_entries (1:N)</div>
+    <div class="rel-item">users → attendance (1:N)</div>
+    <div class="rel-item">users → leaves (1:N)</div>
+    <div class="rel-item">users → profiles (1:1)</div>
+    <div class="rel-item">programs → projects → sub_projects (hierarchy)</div>
+    <div class="rel-item">time_entries → program, project, sub_project, wbs (FK)</div>
+  </div>
+</div>
+</body></html>

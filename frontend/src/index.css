@@ -1,0 +1,208 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body, #root { width: 100%; height: 100%; overflow-x: hidden; }
+
+/* ── GTL Page Styles ── */
+.page-heading {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1C2833;
+  padding-bottom: 10px;
+  border-bottom: 3px solid #154360;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 0;
+}
+
+/* Page header with filters on the right */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid #154360;
+}
+.page-header .page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1C2833;
+}
+.page-header .page-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Week group headers */
+.week-header {
+  background: #154360;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+.week-header:hover { background: #1a5276; }
+.week-header .week-label { font-weight: 700; min-width: 90px; }
+.week-header .week-range { flex: 1; }
+.week-header .week-hours { font-weight: 600; background: rgba(255,255,255,0.15); padding: 2px 12px; border-radius: 10px; font-size: 13px; }
+
+/* Week total row */
+.week-total-row { background: #EBF5FB; text-align: right; padding: 6px 16px; font-weight: 600; }
+.grand-total-row { background: #AED6F1; text-align: right; padding: 10px 16px; font-weight: 700; font-size: 15px; border-radius: 4px; margin-top: 8px; }
+
+/* Table styling */
+.gtl-table .ant-table-thead > tr > th {
+  background: #154360 !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  padding: 8px 12px !important;
+  border: none !important;
+}
+.gtl-table .ant-table-tbody > tr > td {
+  padding: 7px 12px !important;
+  font-size: 13px !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+}
+.gtl-table .ant-table-tbody > tr:hover > td { background: #fafafa !important; }
+
+/* Action icons */
+.action-edit { color: #1677ff; cursor: pointer; font-size: 15px; transition: color 0.2s; }
+.action-edit:hover { color: #0958d9; }
+.action-delete { color: #ff4d4f; cursor: pointer; font-size: 15px; transition: color 0.2s; margin-left: 10px; }
+.action-delete:hover { color: #cf1322; }
+
+/* Filter bar */
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.filter-bar .ant-select { min-width: 140px; }
+
+/* Form sections */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 48px; }
+.form-grid .full-width { grid-column: 1 / -1; }
+.form-label { font-weight: 600; color: #1C2833; margin-bottom: 4px; }
+.form-label .required { color: #e74c3c; }
+
+/* ── Clean form controls (match old GTL's light aesthetic) ── */
+.clean-form .ant-form-item { margin-bottom: 10px; }
+.clean-form .ant-form-item-label { padding-bottom: 0 !important; }
+.clean-form .ant-form-item-label > label {
+  font-weight: 600 !important;
+  color: #1C2833 !important;
+  font-size: 14px !important;
+  height: auto !important;
+}
+.clean-form .ant-select-selector,
+.clean-form .ant-picker,
+.clean-form .ant-input,
+.clean-form .ant-input-password,
+.clean-form .ant-input-affix-wrapper,
+.clean-form textarea.ant-input {
+  border-color: #D0D3D4 !important;
+  border-radius: 0 !important;
+  box-shadow: rgba(149, 157, 165, 0.12) 0px 0px 16px !important;
+  font-size: 14px !important;
+}
+.clean-form .ant-select-selector { height: 38px !important; }
+.clean-form .ant-select-selection-item { line-height: 36px !important; }
+.clean-form .ant-picker { height: 38px !important; }
+.clean-form .ant-select-selector:hover,
+.clean-form .ant-picker:hover,
+.clean-form .ant-input:hover,
+.clean-form textarea.ant-input:hover {
+  border-color: #adb5bd !important;
+}
+.clean-form .ant-select-focused .ant-select-selector,
+.clean-form .ant-picker-focused,
+.clean-form .ant-input:focus,
+.clean-form textarea.ant-input:focus {
+  border-color: #154360 !important;
+  box-shadow: rgba(21, 67, 96, 0.15) 0px 0px 12px !important;
+}
+/* Description counter */
+.clean-form .ant-input-textarea-show-count::after { font-size: 12px; color: #999; }
+
+/* Download button */
+.download-btn {
+  color: #1C2833 !important;
+  background: #F0F3F4 !important;
+  border: 1px solid #1C2833 !important;
+  padding: 4px 28px !important;
+  border-radius: 20px !important;
+  transition: all 0.2s !important;
+  height: 36px !important;
+  font-weight: 500 !important;
+}
+.download-btn:hover { background: #1C2833 !important; color: #fff !important; }
+
+/* Submit button (red like old GTL) */
+.submit-btn {
+  background: #e74c3c !important;
+  border-color: #e74c3c !important;
+  border-radius: 20px !important;
+  padding: 6px 48px !important;
+  height: 42px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s !important;
+}
+.submit-btn:hover { background: #c0392b !important; border-color: #c0392b !important; }
+
+/* Stat cards */
+.stat-card { border-radius: 8px; border: 1px solid #f0f0f0; }
+.stat-card .ant-statistic-title { font-size: 12px; color: #8c8c8c; }
+.stat-card .ant-statistic-content { font-size: 18px; }
+
+/* Attendance row styling */
+.row-holiday td { background: #f0f7ff !important; }
+.row-absent td { background: #fff2f0 !important; }
+
+/* Collapse customization for timesheet */
+.timesheet-collapse .ant-collapse-item { border: none !important; margin-bottom: 6px; }
+.timesheet-collapse .ant-collapse-header {
+  background: #154360 !important;
+  color: #fff !important;
+  border-radius: 4px !important;
+  padding: 8px 14px !important;
+  font-size: 14px !important;
+}
+.timesheet-collapse .ant-collapse-header .ant-collapse-expand-icon { color: #fff !important; }
+.timesheet-collapse .ant-collapse-content { border: 1px solid #e8e8e8 !important; border-top: none !important; }
+.timesheet-collapse .ant-collapse-content-box { padding: 0 !important; }
+
+/* No record found */
+.no-record-found { text-align: center; padding: 40px; color: #8c8c8c; font-size: 15px; }
+
+/* ── Sidebar: always dark teal, ignore company theme ── */
+.ant-layout-sider .ant-menu-dark .ant-menu-item-selected {
+  background-color: #154360 !important;
+}
+.ant-layout-sider .ant-menu-dark .ant-menu-item:hover,
+.ant-layout-sider .ant-menu-dark .ant-menu-submenu-title:hover {
+  background-color: rgba(255,255,255,0.08) !important;
+}
+.ant-layout-sider .ant-menu-dark .ant-menu-item-selected::after {
+  border-right-color: #154360 !important;
+}
+/* Hide the ugly default collapse trigger, replace with clean icon */
+.ant-layout-sider-trigger {
+  background: #0a1f2f !important;
+  border-top: 1px solid rgba(255,255,255,0.06) !important;
+  height: 40px !important;
+  line-height: 40px !important;
+}
+.ant-layout-sider-trigger .anticon {
+  font-size: 14px !important;
+}
