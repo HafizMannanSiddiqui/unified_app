@@ -48,6 +48,17 @@ export class UsersController {
     return this.usersService.getManagerHistory(+userId);
   }
 
+  // ── Admin: Change Employee Role/Team/Manager ──
+  @Post('admin-change-employee')
+  adminChangeEmployee(@Body() body: { userId: number; fieldName: string; newValue: string }, @Request() req: any) {
+    return this.usersService.adminChangeEmployee(body.userId, body.fieldName, body.newValue, req.user.id);
+  }
+
+  @Get('employee-history')
+  getEmployeeHistory(@Query('userId') userId: string) {
+    return this.usersService.getEmployeeHistory(+userId);
+  }
+
   // ── Profile Change Requests ──
   @Post('profile-change')
   submitProfileChange(@Body() body: { userId: number; fieldName: string; newValue: string }) {

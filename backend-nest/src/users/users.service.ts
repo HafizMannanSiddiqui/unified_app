@@ -154,6 +154,61 @@ export class UsersService {
     return managers;
   }
 
+  // ── Admin: Change employee role/team/manager (with history log) ──
+  async adminChangeEmployee(userId: number, fieldName: string, newValue: string, changedBy: number) {
+    let oldValue = '';
+
+    if (fieldName === 'designation') {
+      const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { designation: true } });
+      oldValue = user?.designation?.name || '';
+      let desig = await this.prisma.designation.findFirst({ where: { name: newValue } });
+      if (!desig) desig = await this.prisma.designation.create({ data: { name: newValue } });
+      await this.prisma.user.update({ where: { id: userId }, data: { designationId: desig.id } });
+      await this.prisma.$executeRaw`
+        UPDATE user_team_memberships SET role_in_team = ${newValue} WHERE user_id = ${userId} AND is_primary = true`;
+    } else if (fieldName === 'team') {
+      const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { team: true } });
+      oldValue = user?.team?.teamName || '';
+      let team = await this.prisma.team.findFirst({ where: { teamName: { contains: newValue, mode: 'insensitive' } } });
+      if (!team) team = await this.prisma.team.create({ data: { teamName: newValue, isActive: true } });
+      await this.prisma.user.update({ where: { id: userId }, data: { teamId: team.id } });
+      await this.prisma.$executeRaw`
+        INSERT INTO user_team_memberships (user_id, team_id, is_primary, created_at)
+        VALUES (${userId}, ${team.id}, true, NOW())
+        ON CONFLICT (user_id, team_id) DO UPDATE SET is_primary = true`;
+    } else if (fieldName === 'reportTo') {
+      const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { manager: true } });
+      oldValue = user?.manager?.displayName || '';
+      const manager = await this.prisma.user.findFirst({
+        where: { OR: [{ displayName: { contains: newValue, mode: 'insensitive' } }, { username: newValue }] },
+      });
+      if (manager) {
+        await this.prisma.user.update({ where: { id: userId }, data: { reportTo: manager.id } });
+        await this.prisma.$executeRaw`
+          INSERT INTO user_managers (user_id, manager_id, is_primary, created_at)
+          VALUES (${userId}, ${manager.id}, true, NOW())
+          ON CONFLICT (user_id, manager_id) DO UPDATE SET is_primary = true`;
+      }
+    }
+
+    // Log the change in history
+    await this.prisma.$executeRaw`
+      INSERT INTO employee_history (user_id, field_name, old_value, new_value, changed_by, effective_date, created_at)
+      VALUES (${userId}, ${fieldName}, ${oldValue}, ${newValue}, ${changedBy}, CURRENT_DATE, NOW())`;
+
+    return { success: true, field: fieldName, oldValue, newValue };
+  }
+
+  // Get employee history (role/team/manager changes over time)
+  async getEmployeeHistory(userId: number) {
+    return this.prisma.$queryRaw<any[]>`
+      SELECT eh.*, u.display_name as "changerName"
+      FROM employee_history eh
+      JOIN users u ON u.id = eh.changed_by
+      WHERE eh.user_id = ${userId}
+      ORDER BY eh.effective_date DESC, eh.created_at DESC`;
+  }
+
   // ── Profile Change Requests ──
   async submitProfileChange(userId: number, fieldName: string, newValue: string) {
     // Get current value

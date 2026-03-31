@@ -368,6 +368,8 @@ model User {
   managedUsers        UserManager[]       @relation("ManagedUsers")
   profileChangeRequests  ProfileChangeRequest[] @relation("ProfileChangeUser")
   reviewedChangeRequests ProfileChangeRequest[] @relation("ProfileChangeReviewer")
+  employeeHistory        EmployeeHistory[] @relation("HistoryUser")
+  changedHistory         EmployeeHistory[] @relation("HistoryChanger")
 
   @@index([username])
   @@index([email])
@@ -846,4 +848,26 @@ model ProfileChangeRequest {
   @@index([userId])
   @@index([status])
   @@map("profile_change_requests")
+}
+
+// ============================================================================
+// TABLE 31: employee_history (tracks role/team/manager changes over time)
+// ============================================================================
+
+model EmployeeHistory {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  fieldName   String   @map("field_name") @db.VarChar(50)  // designation, team, reportTo
+  oldValue    String?  @map("old_value") @db.VarChar(500)
+  newValue    String   @map("new_value") @db.VarChar(500)
+  changedBy   Int      @map("changed_by")
+  effectiveDate DateTime @default(now()) @map("effective_date") @db.Date
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user    User @relation("HistoryUser", fields: [userId], references: [id], onDelete: Cascade)
+  changer User @relation("HistoryChanger", fields: [changedBy], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([fieldName])
+  @@map("employee_history")
 }

@@ -464,6 +464,19 @@ export class GtlService {
   }
   updateSubProject(id: number, data: any) { return this.prisma.subProject.update({ where: { id }, data }); }
 
+  // --- Quick-add project/sub-project from Data Entry ---
+  async quickAddProject(data: { projectName: string; programId: number }) {
+    const existing = await this.prisma.project.findFirst({ where: { projectName: { equals: data.projectName, mode: 'insensitive' } } });
+    if (existing) return existing;
+    return this.prisma.project.create({ data: { projectName: data.projectName, programId: data.programId, isActive: true } });
+  }
+
+  async quickAddSubProject(data: { subProjectName: string; programId: number; projectId: number }) {
+    const existing = await this.prisma.subProject.findFirst({ where: { subProjectName: { equals: data.subProjectName, mode: 'insensitive' } } });
+    if (existing) return existing;
+    return this.prisma.subProject.create({ data: { subProjectName: data.subProjectName, programId: data.programId, projectId: data.projectId, isActive: true } });
+  }
+
   // --- WBS ---
   findWbs() { return this.prisma.wbs.findMany({ where: { isActive: true }, orderBy: { description: 'asc' } }); }
 

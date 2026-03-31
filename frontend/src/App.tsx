@@ -26,6 +26,7 @@ import PersonDetail from './pages/reports/PersonDetail';
 import GhostEmployees from './pages/reports/GhostEmployees';
 import DeviceManagement from './pages/manage/DeviceManagement';
 import ChangeRequests from './pages/manage/ChangeRequests';
+import EmployeeManagement from './pages/manage/EmployeeManagement';
 import WeekendAssignments from './pages/attendance/WeekendAssignments';
 import EmployeesReport from './pages/attendance/EmployeesReport';
 
@@ -106,6 +107,7 @@ function AppRoutes() {
         <Route path="admin/workstreams" element={<Workstreams />} />
         <Route path="admin/devices" element={<DeviceManagement />} />
         <Route path="admin/change-requests" element={<ChangeRequests />} />
+        <Route path="admin/employee-management" element={<EmployeeManagement />} />
       </Route>
     </Routes>
   );

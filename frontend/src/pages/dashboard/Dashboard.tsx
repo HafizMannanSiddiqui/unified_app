@@ -67,7 +67,15 @@ export default function Dashboard() {
   const teamName = (teams || []).find((t: any) => t.id === user?.teamId)?.teamName || '-';
   const myTotalHours = (myEntries?.items || []).reduce((s: number, e: any) => s + Number(e.hours), 0);
   const daysPresent = (myAttendance || []).length;
-  const totalWorkDays = now.date();
+  // Calculate working days (weekdays only, exclude Sat/Sun)
+  const totalWorkDays = (() => {
+    let count = 0;
+    for (let d = 1; d <= now.date(); d++) {
+      const day = dayjs(`${now.year()}-${String(now.month() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`).day();
+      if (day !== 0 && day !== 6) count++; // Skip Sunday(0) and Saturday(6)
+    }
+    return count;
+  })();
   const attendancePct = totalWorkDays > 0 ? Math.round((daysPresent / totalWorkDays) * 100) : 0;
 
   const attWithCheckout = (myAttendance || []).filter((a: any) => a.checkinTime && a.checkoutTime);
@@ -257,7 +265,7 @@ export default function Dashboard() {
             </div>
             <Row gutter={8}>
               <Col span={8} style={{ textAlign: 'center' }}><Statistic title="Present" value={daysPresent} valueStyle={{ fontSize: 18, color: '#52c41a' }} /></Col>
-              <Col span={8} style={{ textAlign: 'center' }}><Statistic title="Absent" value={Math.max(0, totalWorkDays - daysPresent)} valueStyle={{ fontSize: 18, color: '#ff4d4f' }} /></Col>
+              <Col span={8} style={{ textAlign: 'center' }}><Statistic title="Absent" value={Math.max(0, totalWorkDays - daysPresent - (balance?.used || 0))} valueStyle={{ fontSize: 18, color: '#ff4d4f' }} /></Col>
               <Col span={8} style={{ textAlign: 'center' }}><Statistic title="On Leave" value={balance?.used || 0} valueStyle={{ fontSize: 18, color: '#fa8c16' }} /></Col>
             </Row>
           </Card>

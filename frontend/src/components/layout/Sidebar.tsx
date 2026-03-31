@@ -76,6 +76,7 @@ export default function Sidebar({ collapsed, onCollapse }: Props) {
       { key: '/admin/employees-report', icon: <BarChartOutlined />, label: 'Employees Report' },
       { key: '/admin/ghost-employees', icon: <UserOutlined />, label: 'Ghost Employees' },
       { key: '/admin/attendance-requests', icon: <CheckCircleOutlined />, label: 'Att. Requests (Admin)' },
+      { key: '/admin/employee-management', icon: <UserOutlined />, label: 'Employee Mgmt' },
       { key: '/admin/change-requests', icon: <CheckCircleOutlined />, label: 'Profile Changes' },
     ] : []),
 

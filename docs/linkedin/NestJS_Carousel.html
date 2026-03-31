@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>NestJS Carousel</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; font-family: 'Inter', sans-serif; }
+  @page { size: 1080px 1350px; margin: 0; }
+  @media print { body { background: none; } .slide { break-after: page; margin: 0; box-shadow: none; } }
+
+  .slide {
+    width: 1080px; height: 1350px; position: relative; overflow: hidden;
+    margin: 0 auto 20px; display: flex; flex-direction: column;
+  }
+
+  /* Brand bar — every slide */
+  .brand-bar {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 40px; z-index: 10;
+  }
+  .brand-bar .name { font-weight: 700; font-size: 16px; }
+  .brand-bar .url { font-size: 14px; opacity: 0.6; }
+  .brand-bar .swipe { font-size: 14px; opacity: 0.4; }
+
+  /* ── SLIDE 1: COVER ── */
+  .s1 {
+    background: linear-gradient(160deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    color: #fff; align-items: center; justify-content: center; text-align: center;
+  }
+  .s1::before {
+    content: ''; position: absolute; top: -200px; right: -200px; width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(229,62,62,0.15), transparent 70%); border-radius: 50%;
+  }
+  .s1::after {
+    content: ''; position: absolute; bottom: -150px; left: -150px; width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(99,102,241,0.2), transparent 70%); border-radius: 50%;
+  }
+  .s1 .nest-logo { width: 120px; height: 120px; background: #e53e3e; border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 60px; font-weight: 900; color: #fff; margin-bottom: 40px; box-shadow: 0 20px 60px rgba(229,62,62,0.3); position: relative; z-index: 1; }
+  .s1 h1 { font-size: 88px; font-weight: 900; letter-spacing: -3px; line-height: 1; margin-bottom: 20px; position: relative; z-index: 1; }
+  .s1 h1 span { background: linear-gradient(135deg, #e53e3e, #f56565); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .s1 .tagline { font-size: 28px; font-weight: 300; color: rgba(255,255,255,0.5); margin-bottom: 60px; position: relative; z-index: 1; }
+  .s1 .author-box { display: flex; align-items: center; gap: 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 60px; padding: 12px 28px 12px 12px; position: relative; z-index: 1; }
+  .s1 .avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #e53e3e); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px; }
+  .s1 .author-name { font-weight: 700; font-size: 18px; }
+  .s1 .author-handle { font-size: 13px; color: rgba(255,255,255,0.4); }
+  .s1 .brand-bar { background: rgba(0,0,0,0.2); color: rgba(255,255,255,0.5); }
+
+  /* ── CONTENT SLIDES ── */
+  .cs {
+    background: #0f0f1a; color: #fff; padding: 60px 60px 80px;
+  }
+  .cs .slide-tag { display: inline-block; background: rgba(229,62,62,0.15); color: #f56565; font-weight: 700; font-size: 14px; padding: 6px 16px; border-radius: 20px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 24px; }
+  .cs h2 { font-size: 52px; font-weight: 900; line-height: 1.15; margin-bottom: 32px; letter-spacing: -1px; }
+  .cs h2 .hl { color: #f56565; }
+  .cs p { font-size: 22px; color: rgba(255,255,255,0.65); line-height: 1.6; margin-bottom: 16px; }
+  .cs .brand-bar { background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.4); }
+
+  /* Cards */
+  .card-row { display: flex; gap: 20px; margin: 24px 0; }
+  .card { flex: 1; border-radius: 16px; padding: 28px; }
+  .card.red { background: rgba(229,62,62,0.08); border: 1.5px solid rgba(229,62,62,0.2); }
+  .card.green { background: rgba(72,187,120,0.08); border: 1.5px solid rgba(72,187,120,0.2); }
+  .card.purple { background: rgba(99,102,241,0.08); border: 1.5px solid rgba(99,102,241,0.2); }
+  .card h3 { font-size: 24px; font-weight: 800; margin-bottom: 16px; }
+  .card.red h3 { color: #f56565; }
+  .card.green h3 { color: #48bb78; }
+  .card li { font-size: 20px; color: rgba(255,255,255,0.6); margin: 10px 0; list-style: none; padding-left: 24px; position: relative; }
+  .card.red li::before { content: '✕'; position: absolute; left: 0; color: #f56565; font-weight: 700; }
+  .card.green li::before { content: '✓'; position: absolute; left: 0; color: #48bb78; font-weight: 700; }
+
+  /* Callout */
+  .callout { background: rgba(99,102,241,0.08); border-left: 4px solid #6366f1; border-radius: 0 12px 12px 0; padding: 24px 28px; margin: 24px 0; }
+  .callout p { color: rgba(255,255,255,0.7); margin: 0; font-size: 22px; }
+  .callout strong { color: #fff; }
+
+  /* Flow steps */
+  .flow { display: flex; flex-direction: column; gap: 12px; margin: 28px 0; }
+  .flow-item { display: flex; align-items: center; gap: 20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 20px 24px; }
+  .flow-item .num { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 22px; color: #fff; flex-shrink: 0; }
+  .flow-item .num.blue { background: #6366f1; }
+  .flow-item .num.red { background: #e53e3e; }
+  .flow-item .num.green { background: #48bb78; }
+  .flow-item .num.orange { background: #ed8936; }
+  .flow-item .num.pink { background: #d53f8c; }
+  .flow-item .num.arrow { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); font-size: 18px; width: 40px; height: 40px; border-radius: 50%; }
+  .flow-item .text { font-size: 21px; color: rgba(255,255,255,0.75); }
+  .flow-item .text strong { color: #fff; font-weight: 800; }
+
+  /* Code block */
+  .code { background: #1a1a2e; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 28px 32px; font-family: 'JetBrains Mono', monospace; font-size: 20px; line-height: 1.8; margin: 24px 0; color: #d4d4d8; overflow: hidden; }
+  .code .kw { color: #c084fc; }
+  .code .fn { color: #fbbf24; }
+  .code .str { color: #34d399; }
+  .code .dec { color: #f87171; }
+  .code .cm { color: #52525b; }
+
+  /* Cheat grid */
+  .cheat { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 24px 0; }
+  .cheat-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 20px; }
+  .cheat-item code { font-family: 'JetBrains Mono', monospace; font-size: 18px; color: #f87171; font-weight: 600; display: block; margin-bottom: 6px; }
+  .cheat-item .desc { font-size: 16px; color: rgba(255,255,255,0.4); }
+
+  /* ── CTA SLIDE ── */
+  .cta {
+    background: linear-gradient(160deg, #1a1a2e 0%, #302b63 100%);
+    color: #fff; align-items: center; justify-content: center; text-align: center;
+  }
+  .cta h2 { font-size: 56px; font-weight: 900; margin-bottom: 40px; }
+  .cta .topics { font-size: 24px; color: rgba(255,255,255,0.5); margin: 8px 0; }
+  .cta .big-name { font-size: 44px; font-weight: 900; margin-top: 48px; background: linear-gradient(135deg, #6366f1, #e53e3e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .cta .handle { font-size: 20px; color: rgba(255,255,255,0.3); margin: 8px 0 40px; }
+  .cta .btns { display: flex; gap: 16px; }
+  .cta .btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); padding: 14px 32px; border-radius: 50px; font-size: 18px; font-weight: 600; }
+  .cta .brand-bar { background: rgba(0,0,0,0.2); color: rgba(255,255,255,0.4); }
+</style>
+</head><body>
+
+<!-- SLIDE 1 -->
+<div class="slide s1">
+  <div class="nest-logo">N</div>
+  <h1>What is <span>NestJS</span>?</h1>
+  <div class="tagline">The only backend guide you'll ever need.</div>
+  <div class="author-box">
+    <div class="avatar">HM</div>
+    <div>
+      <div class="author-name">Hafiz Mannan Siddiqui</div>
+      <div class="author-handle">Software Engineer | AI & ML</div>
+    </div>
+  </div>
+  <div class="brand-bar"><span class="name">@hafiz-mannan-siddiqui</span><span class="swipe">Swipe →</span></div>
+</div>
+
+<!-- SLIDE 2 -->
+<div class="slide cs">
+  <div class="slide-tag">The Problem</div>
+  <h2>Your Express code is a <span class="hl">mess.</span><br>Here's why.</h2>
+  <div class="card-row">
+    <div class="card red">
+      <h3>Express.js</h3>
+      <li>No enforced structure</li>
+      <li>Every dev does it differently</li>
+      <li>Routes + logic + DB all mixed</li>
+      <li>Becomes spaghetti code</li>
+    </div>
+    <div class="card green">
+      <h3>NestJS</h3>
+      <li>Clean architecture enforced</li>
+      <li>Same pattern for everyone</li>
+      <li>Separation of concerns</li>
+      <li>Scales 1 to 100 developers</li>
+    </div>
+  </div>
+  <div class="callout"><p><strong>Think of it this way:</strong><br>Express = LEGO pieces. Build from scratch.<br>NestJS = IKEA furniture. Organized with instructions.</p></div>
+  <div class="brand-bar"><span class="name">Hafiz Mannan Siddiqui</span><span class="url">linkedin.com/in/hafiz-mannan-siddiqui</span></div>
+</div>
+
+<!-- SLIDE 3 -->
+<div class="slide cs">
+  <div class="slide-tag">Core Concept</div>
+  <h2>NestJS has <span class="hl">only 3</span> building blocks.</h2>
+  <p style="margin-bottom:28px">Master these and you master NestJS. Seriously.</p>
+  <div class="flow">
+    <div class="flow-item"><div class="num blue">1</div><div class="text"><strong>MODULE</strong> — The container. Groups related code.</div></div>
+    <div class="flow-item"><div class="num arrow">↓</div><div class="text">Module registers...</div></div>
+    <div class="flow-item"><div class="num red">2</div><div class="text"><strong>CONTROLLER</strong> — The receptionist. Handles HTTP requests.</div></div>
+    <div class="flow-item"><div class="num arrow">↓</div><div class="text">Controller delegates to...</div></div>
+    <div class="flow-item"><div class="num green">3</div><div class="text"><strong>SERVICE</strong> — The brain. Business logic + database.</div></div>
+  </div>
+  <div class="callout"><p><strong>Every feature = Module + Controller + Service.</strong><br>Users? Same pattern. Payments? Same pattern. Always.</p></div>
+  <div class="brand-bar"><span class="name">Hafiz Mannan Siddiqui</span><span class="url">linkedin.com/in/hafiz-mannan-siddiqui</span></div>
+</div>
+
+<!-- SLIDE 4 -->
+<div class="slide cs">
+  <div class="slide-tag">Building Block 1</div>
+  <h2><span class="hl">Module</span> — The Container</h2>
+  <div class="code">
+<span class="dec">@Module</span>({<br>
+&nbsp;&nbsp;<span class="fn">controllers</span>: [UsersController],<br>
+&nbsp;&nbsp;<span class="fn">providers</span>:&nbsp;&nbsp;&nbsp;[UsersService],<br>
+})<br>
+<span class="kw">export class</span> <span class="fn">UsersModule</span> {}
+  </div>
+  <p>Think of it as a labeled box:</p>
+  <div class="callout"><p>📦 <strong>"Everything about Users goes in here"</strong><br><br>• One module per feature<br>• Registers controllers + services<br>• All modules imported in app.module.ts<br>• Does nothing itself — just organizes</p></div>
+  <div class="brand-bar"><span class="name">Hafiz Mannan Siddiqui</span><span class="url">linkedin.com/in/hafiz-mannan-siddiqui</span></div>
+</div>
+
+<!-- SLIDE 5 -->
+<div class="slide cs">
+  <div class="slide-tag">Building Block 2</div>
+  <h2><span class="hl">Controller</span> — The Receptionist</h2>
+  <div class="code">
+<span class="dec">@Controller</span>(<span class="str">'users'</span>)<br>
+<span class="kw">export class</span> <span class="fn">UsersController</span> {<br><br>
+&nbsp;&nbsp;<span class="dec">@Get</span>()&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// GET /users</span><br>
+&nbsp;&nbsp;<span class="fn">findAll</span>() {}<br><br>
+&nbsp;&nbsp;<span class="dec">@Post</span>()&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// POST /users</span><br>
+&nbsp;&nbsp;<span class="fn">create</span>() {}<br><br>
+&nbsp;&nbsp;<span class="dec">@Put</span>(<span class="str">':id'</span>)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// PUT /users/123</span><br>
+&nbsp;&nbsp;<span class="fn">update</span>() {}<br><br>
+&nbsp;&nbsp;<span class="dec">@Delete</span>(<span class="str">':id'</span>)&nbsp;&nbsp;<span class="cm">// DELETE /users/123</span><br>
+&nbsp;&nbsp;<span class="fn">remove</span>() {}<br>
+}
+  </div>
+  <div class="callout"><p>It <strong>receives</strong> requests. It does NOT contain logic. It calls the service.</p></div>
+  <div class="brand-bar"><span class="name">Hafiz Mannan Siddiqui</span><span class="url">linkedin.com/in/hafiz-mannan-siddiqui</span></div>
+</div>
+
+<!-- SLIDE 6 -->
+<div class="slide cs">
+  <div class="slide-tag">Building Block 3</div>
+  <h2><span class="hl">Service</span> — The Brain</h2>
+  <div class="code">
+<span class="dec">@Injectable</span>()<br>
+<span class="kw">export class</span> <span class="fn">UsersService</span> {<br><br>
+&nbsp;&nbsp;<span class="kw">constructor</span>(<span class="kw">private</span> db: PrismaService) {}<br><br>
+&nbsp;&nbsp;<span class="fn">findAll</span>() {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="kw">this</span>.db.user.<span class="fn">findMany</span>();<br>
+&nbsp;&nbsp;}<br><br>
+&nbsp;&nbsp;<span class="fn">create</span>(data) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="kw">this</span>.db.user.<span class="fn">create</span>({ data });<br>
+&nbsp;&nbsp;}<br>
+}
+  </div>
+  <div class="callout"><p>This is where the <strong>REAL work</strong> happens:<br>→ Database queries &nbsp; → Business logic &nbsp; → Calculations</p></div>
+  <div class="brand-bar"><span class="name">Hafiz Mannan Siddiqui</span><span class="url">linkedin.com/in/hafiz-mannan-siddiqui</span></div>
+</div>
+
+<!-- SLIDE 7 -->
+<div class="slide cs">
+  <div class="slide-tag">How It Works</div>
+  <h2>Every request follows <span class="hl">5 steps.</span></h2>
+  <p style="margin-bottom:20px">No exceptions. This is the entire architecture.</p>
+  <div class="flow">
+    <div class="flow-item"><div class="num blue">1</div><div class="text"><strong>Browser:</strong> GET /users/469</div></div>
+    <div class="flow-item"><div class="num red">2</div><div class="text"><strong>Controller:</strong> @Get(':id') → findOne(469)</div></div>
+    <div class="flow-item"><div class="num green">3</div><div class="text"><strong>Service:</strong> db.user.findUnique({ id: 469 })</div></div>
+    <div class="flow-item"><div class="num orange">4</div><div class="text"><strong>Database:</strong> SELECT * FROM users WHERE id = 469</div></div>
+    <div class="flow-item"><div class="num pink">5</div><div class="text"><strong>Response:</strong> { id: 469, name: "Abdul Mannan" }</div></div>
+  </div>
+  <div class="callout"><p><strong>Browser → Controller → Service → Database → Response</strong><br>Once you see this, you can read any NestJS codebase.</p></div>
+  <div class="brand-bar"><span class="name">Hafiz Mannan Siddiqui</span><span class="url">linkedin.com/in/hafiz-mannan-siddiqui</span></div>
+</div>
+
+<!-- SLIDE 8 -->
+<div class="slide cs">
+  <div class="slide-tag">Save This</div>
+  <h2>Decorator <span class="hl">Cheat Sheet</span></h2>
+  <p>Bookmark this slide. You'll use it every day.</p>
+  <div class="cheat">
+    <div class="cheat-item"><code>@Controller('path')</code><div class="desc">Define the base URL for routes</div></div>
+    <div class="cheat-item"><code>@Get() @Post() @Put()</code><div class="desc">Map to HTTP methods</div></div>
+    <div class="cheat-item"><code>@Param('id')</code><div class="desc">Extract from URL: /users/:id</div></div>
+    <div class="cheat-item"><code>@Query('page')</code><div class="desc">Extract query: ?page=2</div></div>
+    <div class="cheat-item"><code>@Body()</code><div class="desc">Extract JSON request body</div></div>
+    <div class="cheat-item"><code>@Request()</code><div class="desc">Full request (for user auth)</div></div>
+    <div class="cheat-item"><code>@UseGuards(Guard)</code><div class="desc">Add security checkpoint</div></div>
+    <div class="cheat-item"><code>@Injectable()</code><div class="desc">Allow dependency injection</div></div>
+  </div>
+  <div class="brand-bar"><span class="name">Hafiz Mannan Siddiqui</span><span class="url">linkedin.com/in/hafiz-mannan-siddiqui</span></div>
+</div>
+
+<!-- SLIDE 9 -->
+<div class="slide cs">
+  <div class="slide-tag">Comparison</div>
+  <h2>NestJS vs <span class="hl">Express</span></h2>
+  <p style="margin-bottom:20px">When to use what? Here's my honest take.</p>
+  <div class="card-row">
+    <div class="card purple">
+      <h3 style="color:#a78bfa">Use Express when:</h3>
+      <li style="padding-left:0">→ Small project / quick prototype</li>
+      <li style="padding-left:0">→ You want full control</li>
+      <li style="padding-left:0">→ Solo developer</li>
+      <li style="padding-left:0">→ Learning Node.js basics</li>
+    </div>
+    <div class="card green">
+      <h3>Use NestJS when:</h3>
+      <li>Team project (2+ developers)</li>
+      <li>Enterprise / production app</li>
+      <li>Need auth, validation built-in</li>
+      <li>TypeScript-first workflow</li>
+      <li>Long-term maintenance matters</li>
+    </div>
+  </div>
+  <div class="callout"><p><strong>My recommendation:</strong> Learn Express first to understand the basics. Then switch to NestJS for anything serious.</p></div>
+  <div class="brand-bar"><span class="name">Hafiz Mannan Siddiqui</span><span class="url">linkedin.com/in/hafiz-mannan-siddiqui</span></div>
+</div>
+
+<!-- SLIDE 10 -->
+<div class="slide cta">
+  <h2>Found this useful?</h2>
+  <div class="topics">→ NestJS, React, TypeScript deep dives</div>
+  <div class="topics">→ Real-world project breakdowns</div>
+  <div class="topics">→ AI & Machine Learning tutorials</div>
+  <div class="topics">→ System design for beginners</div>
+  <div class="big-name">Hafiz Mannan Siddiqui</div>
+  <div class="handle">linkedin.com/in/hafiz-mannan-siddiqui</div>
+  <div class="btns">
+    <div class="btn">💾 Save</div>
+    <div class="btn">♻️ Repost</div>
+    <div class="btn">💬 Comment</div>
+  </div>
+  <div class="brand-bar"><span class="name">Follow for more →</span><span class="swipe">Next: What is React Query?</span></div>
+</div>
+
+</body></html>

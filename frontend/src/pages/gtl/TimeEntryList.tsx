@@ -4,6 +4,7 @@ import { DownloadOutlined, EditOutlined, DeleteOutlined, DownOutlined } from '@a
 import { useState } from 'react';
 import dayjs from 'dayjs';
 import { getTimesheetGrouped, downloadTimesheetCsv, deleteTimeEntry, updateTimeEntry, getPrograms, getProjects, getSubProjects, getWbs } from '../../api/gtl';
+import { getUsers } from '../../api/users';
 import { useAuthStore } from '../../store/authStore';
 import { useLocation } from 'react-router-dom';
 
@@ -38,7 +39,7 @@ export default function TimeEntryList() {
 
   const { data: allUsersData } = useQuery({
     queryKey: ['usersForTimesheet'],
-    queryFn: () => import('../../api/users').then(m => m.getUsers(1, 1000)),
+    queryFn: () => getUsers(1, 1000),
     enabled: !isMyPage,
   });
 

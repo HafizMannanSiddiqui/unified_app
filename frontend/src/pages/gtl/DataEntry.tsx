@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, DatePicker, Form, Select, Input, message, Tag } from 'antd';
 import { ClockCircleOutlined } from '@ant-design/icons';
-import { createTimeEntry, getPrograms, getProjects, getSubProjects, getWbs } from '../../api/gtl';
+import { createTimeEntry, getPrograms, getProjects, getSubProjects, getWbs, quickAddProject, quickAddSubProject } from '../../api/gtl';
 import { getMyAttendance } from '../../api/attendance';
 import { useAuthStore } from '../../store/authStore';
 import { useState } from 'react';
@@ -20,6 +20,8 @@ export default function DataEntry() {
   const [projectId, setProjectId] = useState<number | undefined>();
   const [descLength, setDescLength] = useState(0);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newSubProjectName, setNewSubProjectName] = useState('');
 
   const { data: programs } = useQuery({ queryKey: ['programs'], queryFn: () => getPrograms() });
   const { data: projects } = useQuery({ queryKey: ['projects', programId], queryFn: () => getProjects(programId), enabled: !!programId });
@@ -114,6 +116,12 @@ export default function DataEntry() {
   if (workedHours > 0 && workedHours !== prevWorkedRef[0]) {
     prevWorkedRef[1](workedHours);
     form.setFieldsValue({ hours: workedHours });
+  }
+  // For today (still in office), set 8h as default
+  const isToday2 = selectedDate === dayjs().format('YYYY-MM-DD');
+  const isStillInOffice2 = attRecord?.checkinTime && !attRecord?.checkoutTime && !attRecord?.checkoutState;
+  if (isToday2 && isStillInOffice2 && !form.getFieldValue('hours')) {
+    form.setFieldsValue({ hours: 8 });
   }
 
   const mutation = useMutation({
@@ -247,13 +255,52 @@ export default function DataEntry() {
           <Form.Item name="projectId" label={L('Project Name:', true)} rules={[{ required: true, message: 'Required' }]}>
             <Select placeholder="-- Choose --" showSearch optionFilterProp="label"
               options={(projects || []).map((p: any) => ({ label: p.projectName, value: p.id }))}
-              onChange={(v) => { setProjectId(v); form.setFieldsValue({ subProjectId: undefined }); }} />
+              onChange={(v) => { setProjectId(v); form.setFieldsValue({ subProjectId: undefined }); }}
+              dropdownRender={(menu) => (
+                <>
+                  {menu}
+                  {programId && (
+                    <div style={{ padding: '6px 10px', borderTop: '1px solid #f0f0f0', display: 'flex', gap: 6 }}>
+                      <Input size="small" placeholder="Add new project..." value={newProjectName}
+                        onChange={e => setNewProjectName(e.target.value)} style={{ flex: 1 }} />
+                      <Button size="small" type="primary" disabled={!newProjectName}
+                        onClick={async () => {
+                          const p = await quickAddProject({ projectName: newProjectName, programId });
+                          setNewProjectName('');
+                          setProjectId(p.id);
+                          form.setFieldsValue({ projectId: p.id, subProjectId: undefined });
+                          qc.invalidateQueries({ queryKey: ['projects'] });
+                        }}>Add</Button>
+                    </div>
+                  )}
+                </>
+              )}
+            />
           </Form.Item>
 
           {/* Row 3 */}
           <Form.Item name="subProjectId" label={L('Sub Project Name:', true)} rules={[{ required: true, message: 'Required' }]}>
             <Select placeholder="-- Choose --" showSearch optionFilterProp="label"
-              options={(subProjects || []).map((p: any) => ({ label: p.subProjectName, value: p.id }))} />
+              options={(subProjects || []).map((p: any) => ({ label: p.subProjectName, value: p.id }))}
+              dropdownRender={(menu) => (
+                <>
+                  {menu}
+                  {projectId && programId && (
+                    <div style={{ padding: '6px 10px', borderTop: '1px solid #f0f0f0', display: 'flex', gap: 6 }}>
+                      <Input size="small" placeholder="Add new sub-project..." value={newSubProjectName}
+                        onChange={e => setNewSubProjectName(e.target.value)} style={{ flex: 1 }} />
+                      <Button size="small" type="primary" disabled={!newSubProjectName}
+                        onClick={async () => {
+                          const sp = await quickAddSubProject({ subProjectName: newSubProjectName, programId, projectId });
+                          setNewSubProjectName('');
+                          form.setFieldsValue({ subProjectId: sp.id });
+                          qc.invalidateQueries({ queryKey: ['subProjects'] });
+                        }}>Add</Button>
+                    </div>
+                  )}
+                </>
+              )}
+            />
           </Form.Item>
           <Form.Item name="entryDate" label={L('Date:', true)} rules={[{ required: true, message: 'Required' }]}>
             <DatePicker style={{ width: '100%' }} format="DD MMMM, YYYY - (dddd)" onChange={handleDateChange}
@@ -285,13 +332,24 @@ export default function DataEntry() {
           </Form.Item>
           <div>
             <Form.Item name="hours" label={L('Hours:', true)} rules={[{ required: true, message: 'Required' }]}>
-              <Select placeholder="-- Choose --" options={hoursOptions} />
+              <Input readOnly style={{ background: '#f5f5f5', fontWeight: 700, fontSize: 16, cursor: 'not-allowed' }}
+                suffix={<span style={{ color: '#8c8c8c', fontSize: 12 }}>from attendance</span>}
+                placeholder={!selectedDate ? 'Select a date first' : isToday && isStillInOffice ? 'Will update on checkout' : 'No attendance data'} />
             </Form.Item>
-            {/* Attendance hint */}
             {selectedDate && !isBlocked && attInfo && (
-              <div style={{ marginTop: -8, fontSize: 12, color: '#666' }}>
-                <ClockCircleOutlined style={{ marginRight: 4, color: '#52c41a' }} />
+              <div style={{ marginTop: -8, fontSize: 12, color: '#52c41a' }}>
+                <ClockCircleOutlined style={{ marginRight: 4 }} />
                 {attInfo}
+              </div>
+            )}
+            {selectedDate && !isBlocked && !attInfo && !isToday && (
+              <div style={{ marginTop: -8, fontSize: 12, color: '#fa8c16' }}>
+                No attendance found — hours cannot be determined
+              </div>
+            )}
+            {isToday && isStillInOffice && (
+              <div style={{ marginTop: -8, fontSize: 12, color: '#52c41a' }}>
+                Currently in office — hours will auto-calculate on checkout
               </div>
             )}
           </div>

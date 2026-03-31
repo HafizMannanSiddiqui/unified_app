@@ -54,6 +54,8 @@ export const updateSubProject = (id: number, data: any) => apiClient.put(`/sub-p
 
 // --- WBS ---
 export const getWbs = () => apiClient.get('/wbs').then(r => r.data);
+export const quickAddProject = (data: { projectName: string; programId: number }) => apiClient.post('/projects/quick-add', data).then(r => r.data);
+export const quickAddSubProject = (data: { subProjectName: string; programId: number; projectId: number }) => apiClient.post('/sub-projects/quick-add', data).then(r => r.data);
 export const getWorkstreams = (teamId?: number) => apiClient.get('/workstreams', { params: { teamId } }).then(r => r.data);
 
 // --- Auth ---

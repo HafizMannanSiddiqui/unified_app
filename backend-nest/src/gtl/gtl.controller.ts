@@ -73,6 +73,8 @@ export class GtlController {
 
   // --- Approvals ---
   @Post('approvals/:id/approve')
+  @UseGuards(RolesGuard)
+  @Roles('super admin', 'Admin', 'Application Manager', 'Team Lead')
   async approve(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     // Block self-approval
     const entry = await this.prisma.timeEntry.findUnique({ where: { id }, select: { userId: true } });
@@ -81,6 +83,8 @@ export class GtlController {
   }
 
   @Post('approvals/:id/reject')
+  @UseGuards(RolesGuard)
+  @Roles('super admin', 'Admin', 'Application Manager', 'Team Lead')
   async reject(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     const entry = await this.prisma.timeEntry.findUnique({ where: { id }, select: { userId: true } });
     if (entry?.userId === req.user.id) throw new ForbiddenException('Cannot reject your own entries');
@@ -88,6 +92,8 @@ export class GtlController {
   }
 
   @Post('approvals/batch-approve')
+  @UseGuards(RolesGuard)
+  @Roles('super admin', 'Admin', 'Application Manager', 'Team Lead')
   async batchApprove(@Body() body: { userId: number }, @Request() req: any) {
     if (body.userId === req.user.id) throw new ForbiddenException('Cannot approve your own entries');
     return this.gtl.batchApprove(body.userId, req.user.id);
@@ -148,6 +154,17 @@ export class GtlController {
   createSubProject(@Body() body: any) { return this.gtl.createSubProject(body); }
   @Put('sub-projects/:id')
   updateSubProject(@Param('id', ParseIntPipe) id: number, @Body() body: any) { return this.gtl.updateSubProject(id, body); }
+
+  // --- Quick-add project/sub-project ---
+  @Post('projects/quick-add')
+  quickAddProject(@Body() body: { projectName: string; programId: number }) {
+    return this.gtl.quickAddProject(body);
+  }
+
+  @Post('sub-projects/quick-add')
+  quickAddSubProject(@Body() body: { subProjectName: string; programId: number; projectId: number }) {
+    return this.gtl.quickAddSubProject(body);
+  }
 
   // --- WBS ---
   @Get('wbs')
