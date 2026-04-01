@@ -28,6 +28,16 @@ export class AuthController {
     return { message: 'Password updated successfully' };
   }
 
+  @Post('forgot-password')
+  async forgotPassword(@Body() body: { username: string }) {
+    return this.authService.forgotPassword(body.username);
+  }
+
+  @Post('forgot-password-reset')
+  async forgotPasswordReset(@Body() body: { token: string; newPassword: string }) {
+    return this.authService.forgotPasswordReset(body.token, body.newPassword);
+  }
+
   @Post('logout')
   async logout() {
     return { message: 'Logged out' };

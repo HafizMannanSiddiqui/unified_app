@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Select, DatePicker, Button, Spin, Card, Row, Col, Statistic, Tag } from 'antd';
 import { WarningOutlined, ClockCircleOutlined, ExclamationCircleOutlined, UserOutlined, FileTextOutlined, AlertOutlined } from '@ant-design/icons';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import apiClient from '../../api/client';
 import { getTeams } from '../../api/teams';
@@ -12,7 +13,9 @@ const getLeadInsights = (from: string, to: string, teamId?: number) =>
   apiClient.get('/attendance/lead-insights', { params: { from, to, teamId } }).then(r => r.data);
 
 export default function LeadInsights() {
+  const navigate = useNavigate();
   const now = dayjs();
+  const goToPerson = (userId: number) => navigate(`/admin/person-detail?user=${userId}&from=${range[0]}&to=${range[1]}`);
   const [range, setRange] = useState<[string, string]>([now.startOf('month').format('YYYY-MM-DD'), now.format('YYYY-MM-DD')]);
   const [teamId, setTeamId] = useState<number | undefined>();
   const [submitted, setSubmitted] = useState(false);
@@ -98,7 +101,7 @@ export default function LeadInsights() {
                   <tbody>{data.noGtl.users.map((u: any, i: number) => (
                     <tr key={u.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}>{i + 1}</td>
-                      <td style={{ padding: '5px 12px', fontSize: 12, fontWeight: 500 }}>{u.displayName}</td>
+                      <td style={{ padding: '5px 12px', fontSize: 12, fontWeight: 500, color: '#1677ff', cursor: 'pointer' }} onClick={() => goToPerson(u.id)}>{u.displayName}</td>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}>{u.teamName || '-'}</td>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}><Tag color="green">{u.daysPresent}</Tag></td>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}><Tag color="red">0</Tag></td>
@@ -123,7 +126,7 @@ export default function LeadInsights() {
                   <tbody>{data.missedCheckouts.users.map((u: any, i: number) => (
                     <tr key={u.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}>{i + 1}</td>
-                      <td style={{ padding: '5px 12px', fontSize: 12, fontWeight: 500 }}>{u.displayName}</td>
+                      <td style={{ padding: '5px 12px', fontSize: 12, fontWeight: 500, color: '#1677ff', cursor: 'pointer' }} onClick={() => goToPerson(u.id)}>{u.displayName}</td>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}>{u.teamName || '-'}</td>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}><Tag color="error">{u.missedCount}</Tag></td>
                     </tr>
@@ -134,7 +137,7 @@ export default function LeadInsights() {
           )}
 
           {data.lowHours.users.length > 0 && (
-            <Card title={<><ClockCircleOutlined style={{ color: '#722ed1', marginRight: 8 }} />Below 9h Average ({data.lowHours.count} people)</>}
+            <Card title={<><ClockCircleOutlined style={{ color: '#722ed1', marginRight: 8 }} />Below 8h Average ({data.lowHours.count} people)</>}
               size="small" style={{ borderRadius: 10, marginBottom: 16 }}>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -149,7 +152,7 @@ export default function LeadInsights() {
                   <tbody>{data.lowHours.users.map((u: any, i: number) => (
                     <tr key={u.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}>{i + 1}</td>
-                      <td style={{ padding: '5px 12px', fontSize: 12, fontWeight: 500 }}>{u.displayName}</td>
+                      <td style={{ padding: '5px 12px', fontSize: 12, fontWeight: 500, color: '#1677ff', cursor: 'pointer' }} onClick={() => goToPerson(u.id)}>{u.displayName}</td>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}>{u.teamName || '-'}</td>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}>{u.totalHours}h</td>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}>{u.daysLogged}</td>
@@ -176,9 +179,9 @@ export default function LeadInsights() {
                   <tbody>{data.pendingApprovals.users.slice(0, 30).map((u: any, i: number) => (
                     <tr key={i} style={{ borderBottom: '1px solid #f0f0f0' }}>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}>{i + 1}</td>
-                      <td style={{ padding: '5px 12px', fontSize: 12, fontWeight: 500 }}>{u.displayName}</td>
+                      <td style={{ padding: '5px 12px', fontSize: 12, fontWeight: 500, color: '#1677ff', cursor: 'pointer' }} onClick={() => goToPerson(u.id)}>{u.displayName}</td>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}>{u.teamName || '-'}</td>
-                      <td style={{ padding: '5px 12px', fontSize: 12 }}><Tag color="blue">{u.pendingCount}</Tag></td>
+                      <td style={{ padding: '5px 12px', fontSize: 12 }}><Tag color="blue" style={{ cursor: 'pointer' }} onClick={() => navigate('/admin/approvals')}>{u.pendingCount}</Tag></td>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}>{dayjs(u.oldestEntry).format('DD MMM YY')}</td>
                     </tr>
                   ))}</tbody>

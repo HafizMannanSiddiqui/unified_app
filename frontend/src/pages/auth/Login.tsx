@@ -148,7 +148,10 @@ export default function Login() {
           </Button>
         </Form>
 
-        <div style={{ textAlign: 'center', marginTop: 40, color: '#ccc', fontSize: 11 }}>
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <a href="/forgot-password" style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Forgot Password?</a>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: 24, color: '#ccc', fontSize: 11 }}>
           Unified Portal v2.0
         </div>
       </div>

@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Select, DatePicker, Button, Spin, Card, Row, Col, Statistic, Tag, Modal, Form, message } from 'antd';
 import { WarningOutlined, ClockCircleOutlined, UserOutlined, HomeOutlined } from '@ant-design/icons';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import apiClient from '../../api/client';
 import { getUsers } from '../../api/users';
@@ -15,9 +16,22 @@ const markWfh = (userId: number, date: string) =>
 export default function PersonDetail() {
   const now = dayjs();
   const qc = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [userId, setUserId] = useState<number | undefined>();
   const [range, setRange] = useState<[string, string]>([now.startOf('month').format('YYYY-MM-DD'), now.format('YYYY-MM-DD')]);
   const [submitted, setSubmitted] = useState(false);
+
+  // Auto-fill from URL params (when clicking from Lead Insights)
+  useEffect(() => {
+    const urlUser = searchParams.get('user');
+    const urlFrom = searchParams.get('from');
+    const urlTo = searchParams.get('to');
+    if (urlUser) {
+      setUserId(+urlUser);
+      if (urlFrom && urlTo) setRange([urlFrom, urlTo]);
+      setSubmitted(true);
+    }
+  }, [searchParams]);
   const [wfhModal, setWfhModal] = useState(false);
   const [wfhForm] = Form.useForm();
 

@@ -94,6 +94,30 @@ export class AuthService {
     };
   }
 
+  // Forgot password — verify username, generate reset token
+  async forgotPassword(username: string) {
+    const user = await this.prisma.user.findUnique({ where: { username } });
+    if (!user || !user.isActive) return { success: false, message: 'Username not found or inactive' };
+
+    // Generate a simple token (in production, use crypto.randomBytes)
+    const token = require('crypto').randomBytes(32).toString('hex');
+    await this.prisma.user.update({ where: { id: user.id }, data: { resetLinkToken: token } });
+    return { success: true, token, message: 'Identity verified' };
+  }
+
+  // Reset password using token
+  async forgotPasswordReset(token: string, newPassword: string) {
+    const user = await this.prisma.user.findFirst({ where: { resetLinkToken: token } });
+    if (!user) return { success: false, message: 'Invalid or expired token' };
+
+    const hash = await this.hashPassword(newPassword);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: hash, legacyPasswordMd5: null, resetLinkToken: null },
+    });
+    return { success: true, message: 'Password reset successfully' };
+  }
+
   // Utility: hash a new password
   async hashPassword(password: string): Promise<string> {
     return argon2.hash(password, {
