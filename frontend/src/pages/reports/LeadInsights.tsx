@@ -170,18 +170,18 @@ export default function LeadInsights() {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead><tr style={{ background: '#154360', color: '#fff' }}>
-                    <th style={{ padding: '6px 12px', fontSize: 12 }}>#</th>
-                    <th style={{ padding: '6px 12px', fontSize: 12 }}>Name</th>
-                    <th style={{ padding: '6px 12px', fontSize: 12 }}>Team</th>
-                    <th style={{ padding: '6px 12px', fontSize: 12 }}>Pending</th>
-                    <th style={{ padding: '6px 12px', fontSize: 12 }}>Oldest Entry</th>
+                    <th style={{ padding: '6px 12px', fontSize: 12, width: 40 }}>#</th>
+                    <th style={{ padding: '6px 12px', fontSize: 12, width: '30%' }}>Name</th>
+                    <th style={{ padding: '6px 12px', fontSize: 12, width: '25%' }}>Team</th>
+                    <th style={{ padding: '6px 12px', fontSize: 12, width: '15%', textAlign: 'center' }}>Pending</th>
+                    <th style={{ padding: '6px 12px', fontSize: 12, width: '20%' }}>Oldest Entry</th>
                   </tr></thead>
                   <tbody>{data.pendingApprovals.users.slice(0, 30).map((u: any, i: number) => (
                     <tr key={i} style={{ borderBottom: '1px solid #f0f0f0' }}>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}>{i + 1}</td>
                       <td style={{ padding: '5px 12px', fontSize: 12, fontWeight: 500, color: '#1677ff', cursor: 'pointer' }} onClick={() => goToPerson(u.id)}>{u.displayName}</td>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}>{u.teamName || '-'}</td>
-                      <td style={{ padding: '5px 12px', fontSize: 12 }}><Tag color="blue" style={{ cursor: 'pointer' }} onClick={() => navigate('/admin/approvals')}>{u.pendingCount}</Tag></td>
+                      <td style={{ padding: '5px 12px', fontSize: 12, textAlign: 'center' }}><Tag color="blue" style={{ cursor: 'pointer' }} onClick={() => navigate('/admin/approvals')}>{u.pendingCount}</Tag></td>
                       <td style={{ padding: '5px 12px', fontSize: 12 }}>{dayjs(u.oldestEntry).format('DD MMM YY')}</td>
                     </tr>
                   ))}</tbody>

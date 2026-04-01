@@ -155,7 +155,20 @@ export class UsersService {
   }
 
   // ── Admin: Change employee role/team/manager (with history log) ──
+  // Team Leads can only change their own team. Super admins can change anyone.
   async adminChangeEmployee(userId: number, fieldName: string, newValue: string, changedBy: number) {
+    // Check if changer is super admin
+    const changerRoles = await this.prisma.userHasRole.findMany({ where: { userId: changedBy }, include: { role: true } });
+    const isSuperAdmin = changerRoles.some(r => ['super admin', 'Admin'].includes(r.role.name));
+
+    if (!isSuperAdmin) {
+      // Team Lead — verify the target user is in their team
+      const changer = await this.prisma.user.findUnique({ where: { id: changedBy }, select: { teamId: true } });
+      const target = await this.prisma.user.findUnique({ where: { id: userId }, select: { teamId: true } });
+      if (changer?.teamId !== target?.teamId) {
+        return { error: 'You can only edit members of your own team' };
+      }
+    }
     let oldValue = '';
 
     if (fieldName === 'designation') {
@@ -195,6 +208,11 @@ export class UsersService {
     await this.prisma.$executeRaw`
       INSERT INTO employee_history (user_id, field_name, old_value, new_value, changed_by, effective_date, created_at)
       VALUES (${userId}, ${fieldName}, ${oldValue}, ${newValue}, ${changedBy}, CURRENT_DATE, NOW())`;
+
+    // Audit log
+    await this.prisma.$executeRaw`
+      INSERT INTO audit_logs (user_id, action, target_id, details, created_at)
+      VALUES (${changedBy}, 'change_employee', ${userId}, ${`${fieldName}: "${oldValue}" → "${newValue}"`}, NOW())`;
 
     return { success: true, field: fieldName, oldValue, newValue };
   }

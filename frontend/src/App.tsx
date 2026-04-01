@@ -28,6 +28,8 @@ import GhostEmployees from './pages/reports/GhostEmployees';
 import DeviceManagement from './pages/manage/DeviceManagement';
 import ChangeRequests from './pages/manage/ChangeRequests';
 import EmployeeManagement from './pages/manage/EmployeeManagement';
+import WfhManagement from './pages/attendance/WfhManagement';
+import AuditLog from './pages/manage/AuditLog';
 import WeekendAssignments from './pages/attendance/WeekendAssignments';
 import EmployeesReport from './pages/attendance/EmployeesReport';
 
@@ -82,6 +84,7 @@ function AppRoutes() {
         <Route path="my/team" element={<MyTeam />} />
         <Route path="my/directory" element={<ContactDirectory />} />
         <Route path="my/weekend-assignments" element={<WeekendAssignments />} />
+        <Route path="my/wfh" element={<WfhManagement />} />
         <Route path="reset-password" element={<ResetPassword />} />
 
         {/* Admin Portal — admin/lead/manager roles */}
@@ -110,6 +113,7 @@ function AppRoutes() {
         <Route path="admin/devices" element={<DeviceManagement />} />
         <Route path="admin/change-requests" element={<ChangeRequests />} />
         <Route path="admin/employee-management" element={<EmployeeManagement />} />
+        <Route path="admin/audit-log" element={<AuditLog />} />
       </Route>
     </Routes>
   );

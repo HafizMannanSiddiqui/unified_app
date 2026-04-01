@@ -62,6 +62,7 @@ export default function Sidebar({ collapsed, onCollapse }: Props) {
         { key: '/my/apply-leave', icon: <ScheduleOutlined />, label: 'Apply Leave' },
       ],
     },
+    { key: '/my/wfh', icon: <CalendarOutlined />, label: 'Work From Home' },
     { key: '/my/attendance-requests', icon: <CalendarOutlined />, label: 'Attendance Requests' },
     { key: '/my/weekend-assignments', icon: <CalendarOutlined />, label: 'Weekend Assignments' },
     { key: '/my/holidays', icon: <CalendarOutlined />, label: 'Holidays' },
@@ -101,6 +102,7 @@ export default function Sidebar({ collapsed, onCollapse }: Props) {
           { key: '/admin/attendance/daily', icon: <BarChartOutlined />, label: 'Daily Attendance' },
         ],
       },
+      { key: '/admin/audit-log', icon: <SettingOutlined />, label: 'Audit Log' },
       { key: '/admin/devices', icon: <SettingOutlined />, label: 'ZKTeco Devices' },
       {
         key: 'manage', icon: <SettingOutlined />, label: 'Manage',

@@ -103,12 +103,37 @@ export class AttendanceController {
     return this.attendanceService.getMyTeam(req.user.id);
   }
 
-  // --- WFH (leads/admins only) ---
-  @Post('mark-wfh')
+  // --- WFH Management ---
+  @Post('wfh/assign')
   @UseGuards(RolesGuard)
   @Roles('super admin', 'Admin', 'Application Manager', 'Team Lead', 'Hr Manager')
-  markWfh(@Body() body: { userId: number; date: string }, @Request() req: any) {
-    return this.attendanceService.markWfh(body.userId, body.date, req.user.id);
+  assignWfh(@Body() body: { userId: number; date: string; tasks: string }, @Request() req: any) {
+    return this.attendanceService.assignWfh(body.userId, body.date, body.tasks, req.user.id);
+  }
+
+  @Get('wfh/records')
+  getWfhRecords(@Query('userId') userId?: string, @Query('from') from?: string, @Query('to') to?: string, @Query('teamId') teamId?: string) {
+    return this.attendanceService.getWfhRecords(userId ? +userId : undefined, from, to, teamId ? +teamId : undefined);
+  }
+
+  @Post('wfh/submit-deliverables')
+  submitWfhDeliverables(@Body() body: { id: number; deliverables: string; hoursLogged: number }) {
+    return this.attendanceService.submitWfhDeliverables(body.id, body.deliverables, body.hoursLogged);
+  }
+
+  @Post('wfh/review')
+  @UseGuards(RolesGuard)
+  @Roles('super admin', 'Admin', 'Application Manager', 'Team Lead')
+  reviewWfh(@Body() body: { id: number; reviewNote: string }, @Request() req: any) {
+    return this.attendanceService.reviewWfh(body.id, body.reviewNote, req.user.id);
+  }
+
+  // --- Audit Logs (super admin only) ---
+  @Get('audit-logs')
+  @UseGuards(RolesGuard)
+  @Roles('super admin', 'Admin')
+  getAuditLogs(@Query('limit') limit?: string) {
+    return this.attendanceService.getAuditLogs(limit ? +limit : 100);
   }
 
   // --- Person Detail (leads/admins only) ---

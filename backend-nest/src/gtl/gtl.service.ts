@@ -67,12 +67,16 @@ export class GtlService {
     return this.prisma.timeEntry.delete({ where: { id } });
   }
 
-  approveEntry(id: number, approverId: number) {
-    return this.prisma.timeEntry.update({ where: { id }, data: { status: 1, approverId } });
+  async approveEntry(id: number, approverId: number) {
+    const entry = await this.prisma.timeEntry.update({ where: { id }, data: { status: 1, approverId } });
+    await this.prisma.$executeRaw`INSERT INTO audit_logs (user_id, action, target_id, details, created_at) VALUES (${approverId}, 'approve_timesheet', ${entry.userId}, ${'Entry #' + id + ' approved'}, NOW())`;
+    return entry;
   }
 
-  rejectEntry(id: number, approverId: number) {
-    return this.prisma.timeEntry.update({ where: { id }, data: { status: 2, approverId } });
+  async rejectEntry(id: number, approverId: number) {
+    const entry = await this.prisma.timeEntry.update({ where: { id }, data: { status: 2, approverId } });
+    await this.prisma.$executeRaw`INSERT INTO audit_logs (user_id, action, target_id, details, created_at) VALUES (${approverId}, 'reject_timesheet', ${entry.userId}, ${'Entry #' + id + ' rejected'}, NOW())`;
+    return entry;
   }
 
   // Batch approve all pending entries for a user

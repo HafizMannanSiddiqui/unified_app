@@ -370,6 +370,9 @@ model User {
   reviewedChangeRequests ProfileChangeRequest[] @relation("ProfileChangeReviewer")
   employeeHistory        EmployeeHistory[] @relation("HistoryUser")
   changedHistory         EmployeeHistory[] @relation("HistoryChanger")
+  wfhRecords             WfhRecord[] @relation("WfhUser")
+  wfhAssigned            WfhRecord[] @relation("WfhAssigner")
+  auditLogs              AuditLog[] @relation("AuditUser")
 
   @@index([username])
   @@index([email])
@@ -848,6 +851,55 @@ model ProfileChangeRequest {
   @@index([userId])
   @@index([status])
   @@map("profile_change_requests")
+}
+
+// ============================================================================
+// TABLE 32: wfh_records (Work From Home tracking)
+// ============================================================================
+
+model WfhRecord {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  date        DateTime @db.Date
+  assignedBy  Int      @map("assigned_by")
+  status      Int      @default(1) @db.SmallInt // 1=assigned, 2=completed, 3=cancelled
+  tasks       String?  @db.Text // What they plan to do
+  deliverables String? @db.Text // What they actually delivered (filled by employee)
+  reviewNote  String?  @map("review_note") @db.Text // Lead's review
+  reviewedBy  Int?     @map("reviewed_by")
+  hoursLogged Decimal? @map("hours_logged") @db.Decimal(5,2)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  user     User @relation("WfhUser", fields: [userId], references: [id], onDelete: Cascade)
+  assigner User @relation("WfhAssigner", fields: [assignedBy], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+  @@map("wfh_records")
+}
+
+// ============================================================================
+// TABLE 33: audit_logs (track all admin actions)
+// ============================================================================
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id") // who performed the action
+  action    String   @db.VarChar(100) // approve_timesheet, deactivate_user, etc.
+  targetId  Int?     @map("target_id") // affected user/entity id
+  details   String?  @db.Text // JSON with before/after
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation("AuditUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 
 // ============================================================================

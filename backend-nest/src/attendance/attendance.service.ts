@@ -227,6 +227,78 @@ export class AttendanceService {
     return { success: true, message: `WFH marked for ${date}` };
   }
 
+  // --- WFH Management ---
+  async assignWfh(userId: number, date: string, tasks: string, assignedBy: number) {
+    // Check if already has WFH or attendance for this date
+    const existing = await this.prisma.$queryRaw<any[]>`
+      SELECT id FROM wfh_records WHERE user_id = ${userId} AND date = ${date}::date LIMIT 1`;
+    if (existing.length > 0) return { error: 'WFH already assigned for this date' };
+
+    await this.prisma.$executeRaw`
+      INSERT INTO wfh_records (user_id, date, assigned_by, status, tasks, created_at, updated_at)
+      VALUES (${userId}, ${date}::date, ${assignedBy}, 1, ${tasks}, NOW(), NOW())`;
+
+    // Also create attendance record for the day
+    await this.prisma.$executeRaw`
+      INSERT INTO attendance (user_id, checkin_date, checkin_time, checkout_date, checkout_time, status, checkin_state, checkout_state, checkin_hostname, created_at, updated_at)
+      VALUES (${userId}, ${date}::date, '09:00:00'::time, ${date}::date, '18:00:00'::time, 1, 'manual', 'manual', 'WFH', NOW(), NOW())
+      ON CONFLICT DO NOTHING`;
+
+    // Audit log
+    await this.logAudit(assignedBy, 'assign_wfh', userId, `WFH assigned for ${date}`);
+
+    return { success: true, message: `WFH assigned for ${date}` };
+  }
+
+  async getWfhRecords(userId?: number, from?: string, to?: string, teamId?: number) {
+    let filter = 'WHERE 1=1';
+    if (userId) filter += ` AND w.user_id = ${userId}`;
+    if (from) filter += ` AND w.date >= '${from}'::date`;
+    if (to) filter += ` AND w.date <= '${to}'::date`;
+    if (teamId) filter += ` AND u.team_id = ${teamId}`;
+
+    return this.prisma.$queryRawUnsafe<any[]>(`
+      SELECT w.*, u.display_name as "displayName", u.username, t.team_name as "teamName",
+             a.display_name as "assignerName"
+      FROM wfh_records w
+      JOIN users u ON u.id = w.user_id
+      LEFT JOIN teams t ON t.id = u.team_id
+      JOIN users a ON a.id = w.assigned_by
+      ${filter}
+      ORDER BY w.date DESC`);
+  }
+
+  // Employee submits their WFH deliverables
+  async submitWfhDeliverables(id: number, deliverables: string, hoursLogged: number) {
+    await this.prisma.$executeRaw`
+      UPDATE wfh_records SET deliverables = ${deliverables}, hours_logged = ${hoursLogged}, status = 2, updated_at = NOW()
+      WHERE id = ${id}`;
+    return { success: true };
+  }
+
+  // Lead reviews WFH
+  async reviewWfh(id: number, reviewNote: string, reviewedBy: number) {
+    await this.prisma.$executeRaw`
+      UPDATE wfh_records SET review_note = ${reviewNote}, reviewed_by = ${reviewedBy}, updated_at = NOW()
+      WHERE id = ${id}`;
+    await this.logAudit(reviewedBy, 'review_wfh', null, `WFH reviewed: ${reviewNote}`);
+    return { success: true };
+  }
+
+  // --- Audit Log ---
+  async logAudit(userId: number, action: string, targetId: number | null, details: string) {
+    await this.prisma.$executeRaw`
+      INSERT INTO audit_logs (user_id, action, target_id, details, created_at)
+      VALUES (${userId}, ${action}, ${targetId}, ${details}, NOW())`;
+  }
+
+  async getAuditLogs(limit = 100) {
+    return this.prisma.$queryRaw<any[]>`
+      SELECT al.*, u.display_name as "userName"
+      FROM audit_logs al JOIN users u ON u.id = al.user_id
+      ORDER BY al.created_at DESC LIMIT ${limit}`;
+  }
+
   // --- Kiosk attendance: verify user + auto mark checkin/checkout ---
   async kioskMarkAttendance(username: string, password: string) {
     // Import auth dependencies
