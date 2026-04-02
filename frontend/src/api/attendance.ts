@@ -28,8 +28,8 @@ export const getMonthlyReport = (userId: number, year: number, month: number) =>
 export const getAttendanceRequests = (params?: any) =>
   apiClient.get('/attendance/requests', { params }).then(r => r.data);
 
-export const getAllAttendanceRequests = (status?: number) =>
-  apiClient.get('/attendance/requests/all', { params: { status } }).then(r => r.data);
+export const getAllAttendanceRequests = (status?: number, managerId?: number) =>
+  apiClient.get('/attendance/requests/all', { params: { status, managerId } }).then(r => r.data);
 
 export const createAttendanceRequest = (data: any) =>
   apiClient.post('/attendance/requests', data).then(r => r.data);
@@ -59,5 +59,5 @@ export const getMyTeam = () =>
   apiClient.get('/attendance/my-team').then(r => r.data);
 
 // Employees Report
-export const getEmployeesReport = (from: string, to: string, teamId?: number) =>
-  apiClient.get('/attendance/employees-report', { params: { from, to, teamId } }).then(r => r.data);
+export const getEmployeesReport = (from: string, to: string, teamId?: number, managerId?: number) =>
+  apiClient.get('/attendance/employees-report', { params: { from, to, teamId, managerId } }).then(r => r.data);

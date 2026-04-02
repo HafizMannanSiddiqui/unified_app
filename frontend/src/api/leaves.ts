@@ -1,7 +1,7 @@
 import apiClient from './client';
 
-export const getLeaves = (userId?: number, status?: string) =>
-  apiClient.get('/leaves', { params: { userId, status } }).then(r => r.data);
+export const getLeaves = (userId?: number, status?: string, managerId?: number) =>
+  apiClient.get('/leaves', { params: { userId, status, managerId } }).then(r => r.data);
 
 export const createLeave = (data: any) =>
   apiClient.post('/leaves', data).then(r => r.data);

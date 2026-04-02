@@ -26,7 +26,7 @@ export const downloadTimesheetCsv = (userId: number, year: number, month: number
 export const approveEntry = (id: number) => apiClient.post(`/approvals/${id}/approve`).then(r => r.data);
 export const rejectEntry = (id: number) => apiClient.post(`/approvals/${id}/reject`).then(r => r.data);
 export const batchApprove = (userId: number) => apiClient.post('/approvals/batch-approve', { userId }).then(r => r.data);
-export const getPendingUsers = () => apiClient.get('/approvals/pending-users').then(r => r.data);
+export const getPendingUsers = (managerId?: number) => apiClient.get('/approvals/pending-users', { params: { managerId } }).then(r => r.data);
 export const getPendingEntriesGrouped = (userId: number) => apiClient.get('/approvals/pending-grouped', { params: { userId } }).then(r => r.data);
 
 // --- Resource Allocation ---
@@ -34,7 +34,7 @@ export const getResourceAllocation = (year: number, month: number) => apiClient.
 export const getProjectAllocation = (year: number, month: number) => apiClient.get('/project-allocation', { params: { year, month } }).then(r => r.data);
 
 // --- Reports ---
-export const getTeamReport = (from: string, to: string, teamId?: number) => apiClient.get('/reports/team', { params: { from, to, teamId } }).then(r => r.data);
+export const getTeamReport = (from: string, to: string, teamId?: number, managerId?: number) => apiClient.get('/reports/team', { params: { from, to, teamId, managerId } }).then(r => r.data);
 export const getGeneralReport = (params: any) => apiClient.get('/reports/general', { params }).then(r => r.data);
 
 // --- Programs CRUD ---

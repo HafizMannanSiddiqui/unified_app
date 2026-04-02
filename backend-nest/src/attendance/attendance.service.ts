@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+
+const ADMIN_ROLES = ['super admin', 'Admin', 'Application Manager'];
 
 @Injectable()
 export class AttendanceService {
@@ -140,8 +142,10 @@ export class AttendanceService {
       ORDER BY checkin_date DESC`;
   }
 
-  async getDailyReport(date: string, teamId?: number) {
-    const teamFilter = teamId ? `AND u.team_id = ${teamId}` : '';
+  async getDailyReport(date: string, teamId?: number, managerId?: number) {
+    const scopeFilter = managerId
+      ? `AND u.id IN (SELECT user_id FROM user_managers WHERE manager_id = ${managerId})`
+      : teamId ? `AND u.team_id = ${teamId}` : '';
     return this.prisma.$queryRawUnsafe<any[]>(`
       SELECT a.id, a.user_id as "userId", a.checkin_date as "checkinDate",
              a.checkin_time::text as "checkinTime", a.checkout_time::text as "checkoutTime",
@@ -149,7 +153,7 @@ export class AttendanceService {
              json_build_object('username', u.username, 'displayName', u.display_name, 'teamId', u.team_id) as user
       FROM attendance a
       JOIN users u ON u.id = a.user_id
-      WHERE a.checkin_date = '${date}'::date ${teamFilter}
+      WHERE a.checkin_date = '${date}'::date ${scopeFilter}
       ORDER BY a.checkin_time ASC`);
   }
 
@@ -250,12 +254,13 @@ export class AttendanceService {
     return { success: true, message: `WFH assigned for ${date}` };
   }
 
-  async getWfhRecords(userId?: number, from?: string, to?: string, teamId?: number) {
+  async getWfhRecords(userId?: number, from?: string, to?: string, teamId?: number, managerId?: number) {
     let filter = 'WHERE 1=1';
     if (userId) filter += ` AND w.user_id = ${userId}`;
     if (from) filter += ` AND w.date >= '${from}'::date`;
     if (to) filter += ` AND w.date <= '${to}'::date`;
-    if (teamId) filter += ` AND u.team_id = ${teamId}`;
+    if (managerId) filter += ` AND u.id IN (SELECT user_id FROM user_managers WHERE manager_id = ${managerId})`;
+    else if (teamId) filter += ` AND u.team_id = ${teamId}`;
 
     return this.prisma.$queryRawUnsafe<any[]>(`
       SELECT w.*, u.display_name as "displayName", u.username, t.team_name as "teamName",
@@ -467,9 +472,14 @@ export class AttendanceService {
     return request;
   }
 
-  async findAllRequests(status?: number) {
+  async findAllRequests(status?: number, managerId?: number) {
     const where: any = {};
     if (status !== undefined) where.status = status;
+    if (managerId) {
+      const reportees = await this.prisma.$queryRaw<{ user_id: number }[]>`
+        SELECT user_id FROM user_managers WHERE manager_id = ${managerId}`;
+      where.requesterId = { in: reportees.map(r => r.user_id) };
+    }
     const results = await this.prisma.attendanceRequest.findMany({
       where,
       include: {
@@ -515,8 +525,10 @@ export class AttendanceService {
   }
 
   // --- Employees Report ---
-  async getEmployeesReport(from: string, to: string, teamId?: number) {
-    const teamFilter = teamId ? `AND u.team_id = ${teamId}` : '';
+  async getEmployeesReport(from: string, to: string, teamId?: number, managerId?: number) {
+    const teamFilter = managerId
+      ? `AND u.id IN (SELECT user_id FROM user_managers WHERE manager_id = ${managerId})`
+      : teamId ? `AND u.team_id = ${teamId}` : '';
     return this.prisma.$queryRawUnsafe<any[]>(`
       SELECT u.id, u.username, u.display_name as "displayName",
              t.team_name as "teamName",
@@ -639,8 +651,10 @@ export class AttendanceService {
   }
 
   // ── TEAM LEAD INSIGHTS ──
-  async getLeadInsights(from: string, to: string, teamId?: number) {
-    const teamFilter = teamId ? `AND u.team_id = ${teamId}` : '';
+  async getLeadInsights(from: string, to: string, teamId?: number, managerId?: number) {
+    const teamFilter = managerId
+      ? `AND u.id IN (SELECT user_id FROM user_managers WHERE manager_id = ${managerId})`
+      : teamId ? `AND u.team_id = ${teamId}` : '';
 
     // 1. Present but no GTL logged
     const noGtl = await this.prisma.$queryRawUnsafe<any[]>(`
@@ -723,8 +737,10 @@ export class AttendanceService {
   }
 
   // Late Arrival Report (checkin after threshold)
-  async getLateArrivals(from: string, to: string, teamId?: number, threshold = '15:30:00') {
-    const teamFilter = teamId ? `AND u.team_id = ${teamId}` : '';
+  async getLateArrivals(from: string, to: string, teamId?: number, threshold = '15:30:00', managerId?: number) {
+    const teamFilter = managerId
+      ? `AND u.id IN (SELECT user_id FROM user_managers WHERE manager_id = ${managerId})`
+      : teamId ? `AND u.team_id = ${teamId}` : '';
     return this.prisma.$queryRawUnsafe<any[]>(`
       SELECT a.checkin_date as "checkinDate", a.checkin_time::text as "checkinTime",
              u.display_name as "displayName", u.username, t.team_name as "teamName"
@@ -737,17 +753,17 @@ export class AttendanceService {
       ORDER BY a.checkin_date DESC, a.checkin_time DESC`);
   }
 
-  // My Team - who reports to me
+  // My Team - who reports to me (via user_managers junction table)
   async getMyTeam(managerId: number) {
-    const subordinates = await this.prisma.user.findMany({
-      where: { reportTo: managerId, isActive: true },
-      select: {
-        id: true, username: true, displayName: true, email: true,
-        team: { select: { teamName: true } },
-        designation: { select: { name: true } },
-      },
-      orderBy: { displayName: 'asc' },
-    });
+    const subordinates = await this.prisma.$queryRaw<any[]>`
+      SELECT DISTINCT u.id, u.username, u.display_name as "displayName", u.email,
+             t.team_name as "teamName", d.name as "designation"
+      FROM user_managers um
+      JOIN users u ON u.id = um.user_id
+      LEFT JOIN teams t ON t.id = u.team_id
+      LEFT JOIN designations d ON d.id = u.designation_id
+      WHERE um.manager_id = ${managerId} AND u.is_active = true
+      ORDER BY u.display_name ASC`;
 
     // Get today's attendance for each
     const today = new Date().toISOString().slice(0, 10);
@@ -765,5 +781,15 @@ export class AttendanceService {
       });
     }
     return result;
+  }
+
+  // Verify caller can access target user's data (admin = anyone, lead = only reportees)
+  async verifyReporteeAccess(callerId: number, targetUserId: number) {
+    const callerRoles = await this.prisma.userHasRole.findMany({ where: { userId: callerId }, include: { role: true } });
+    const isAdmin = callerRoles.some(r => ADMIN_ROLES.includes(r.role.name));
+    if (isAdmin) return; // admins can see anyone
+    const isReportee = await this.prisma.$queryRaw<any[]>`
+      SELECT 1 FROM user_managers WHERE user_id = ${targetUserId} AND manager_id = ${callerId} LIMIT 1`;
+    if (isReportee.length === 0) throw new ForbiddenException('You can only view your own reportees');
   }
 }

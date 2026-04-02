@@ -1,25 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
-import { Tag, Spin, Avatar, Card, Select, Input, Tabs } from 'antd';
-import { TeamOutlined, CheckCircleOutlined, CloseCircleOutlined, SearchOutlined, UserOutlined } from '@ant-design/icons';
+import { Tag, Spin, Avatar, Card, Input } from 'antd';
+import { TeamOutlined, CheckCircleOutlined, CloseCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
-import { getMyTeams } from '../../api/users';
-import { getTodayDashboard } from '../../api/attendance';
-import { getTeams } from '../../api/teams';
+import { getMyTeams, getDirectory } from '../../api/users';
 import apiClient from '../../api/client';
 import { useState } from 'react';
 
-const getTeamMembers = (teamId: number) =>
-  apiClient.get('/users', { params: { pageSize: 500 } }).then(r =>
-    (r.data.items || []).filter((u: any) => u.teamId === teamId && u.isActive)
-  );
+const getMyTeamAttendance = () => apiClient.get('/attendance/my-team').then(r => r.data);
+const getTodayDashboard = () => apiClient.get('/attendance/today').then(r => r.data);
 
-const getAllMemberships = () =>
-  apiClient.get('/users', { params: { pageSize: 1000 } }).then(r => r.data.items || []);
+const LEAD_ROLES = ['super admin', 'Admin', 'Application Manager', 'Team Lead', 'Hr Manager'];
 
 export default function MyTeam() {
   const user = useAuthStore((s) => s.user);
+  const isLead = user?.roles?.some((r: any) => LEAD_ROLES.includes(r.name));
   const [search, setSearch] = useState('');
-  const [selectedTeam, setSelectedTeam] = useState<number | undefined>(user?.teamId || undefined);
 
   const { data: myInfo } = useQuery({
     queryKey: ['myTeamsManagers', user?.id],
@@ -27,16 +22,27 @@ export default function MyTeam() {
     enabled: !!user?.id,
   });
 
-  const { data: teams } = useQuery({ queryKey: ['teams'], queryFn: () => getTeams() });
-
-  const { data: allUsers, isLoading } = useQuery({
-    queryKey: ['allUsersForTeam'],
-    queryFn: getAllMemberships,
+  // For leads: get reportees with today's attendance
+  const { data: reporteeData, isLoading: loadingReportees } = useQuery({
+    queryKey: ['myTeamAttendance', user?.id],
+    queryFn: getMyTeamAttendance,
+    enabled: isLead && !!user?.id,
+    refetchInterval: 60000,
   });
 
+  // For employees: get teammates from their primary team
+  const primaryTeamId = (myInfo?.teams || []).find((t: any) => t.isPrimary)?.teamId || user?.teamId;
+  const { data: teammates, isLoading: loadingTeammates } = useQuery({
+    queryKey: ['myTeammates', primaryTeamId],
+    queryFn: () => getDirectory(undefined, primaryTeamId),
+    enabled: !isLead && !!primaryTeamId,
+  });
+
+  // Get today's attendance to show present/absent for teammates
   const { data: todayDash } = useQuery({
     queryKey: ['todayDashboard'],
     queryFn: getTodayDashboard,
+    enabled: !isLead,
     refetchInterval: 60000,
   });
 
@@ -46,32 +52,34 @@ export default function MyTeam() {
     if (u.checkinTime) checkinMap.set(u.id, u.checkinTime);
   }
 
-  // Group users by team
-  const teamGroups = new Map<number, any[]>();
-  (allUsers || []).filter((u: any) => u.isActive).forEach((u: any) => {
-    if (u.teamId) {
-      if (!teamGroups.has(u.teamId)) teamGroups.set(u.teamId, []);
-      teamGroups.get(u.teamId)!.push(u);
-    }
-  });
+  const myTeams = myInfo?.teams || [];
+  const myManagers = myInfo?.managers || [];
 
-  // Group by role within selected team
-  const selectedMembers = selectedTeam ? (teamGroups.get(selectedTeam) || []) : [];
-  const filteredMembers = selectedMembers.filter((u: any) =>
+  // Build member list based on role
+  const members = isLead
+    ? (reporteeData || []).map((m: any) => ({ ...m, isPresent: m.isPresent, checkinTime: m.todayCheckin }))
+    : (teammates || []).filter((u: any) => u.id !== user?.id).map((u: any) => ({
+        id: u.id, displayName: u.displayName, username: u.username,
+        designation: u.designation?.name || '', teamName: u.team?.teamName || '',
+        isPresent: presentIds.has(u.id), checkinTime: checkinMap.get(u.id) || null,
+      }));
+
+  const filtered = members.filter((u: any) =>
     !search || (u.displayName || u.username || '').toLowerCase().includes(search.toLowerCase())
-      || (u.designation?.name || '').toLowerCase().includes(search.toLowerCase())
+      || (u.designation || '').toLowerCase().includes(search.toLowerCase())
   );
 
+  // Group by designation
   const roleGroups = new Map<string, any[]>();
-  filteredMembers.forEach((u: any) => {
-    const role = u.designation?.name || 'Unassigned';
+  filtered.forEach((u: any) => {
+    const role = u.designation || 'Unassigned';
     if (!roleGroups.has(role)) roleGroups.set(role, []);
     roleGroups.get(role)!.push(u);
   });
 
-  const myTeams = myInfo?.teams || [];
-  const myManagers = myInfo?.managers || [];
-  const selectedTeamName = (teams || []).find((t: any) => t.id === selectedTeam)?.teamName || '';
+  const presentCount = filtered.filter((u: any) => u.isPresent).length;
+  const absentCount = filtered.length - presentCount;
+  const loading = isLead ? loadingReportees : loadingTeammates;
 
   return (
     <div>
@@ -84,8 +92,7 @@ export default function MyTeam() {
             <div style={{ fontWeight: 600, color: '#1C2833', marginBottom: 6 }}>My Teams</div>
             {myTeams.length === 0 ? <span style={{ color: '#8c8c8c' }}>No teams</span> : myTeams.map((t: any) => (
               <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                <Tag color={t.isPrimary ? 'blue' : 'default'} style={{ cursor: 'pointer' }}
-                  onClick={() => setSelectedTeam(t.teamId)}>{t.teamName}</Tag>
+                <Tag color={t.isPrimary ? 'blue' : 'default'}>{t.teamName}</Tag>
                 {t.roleInTeam && <span style={{ fontSize: 12, color: '#666' }}>({t.roleInTeam})</span>}
                 {t.isPrimary && <Tag color="gold" style={{ fontSize: 9 }}>Primary</Tag>}
               </div>
@@ -97,25 +104,23 @@ export default function MyTeam() {
               <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                 <Tag color="geekblue">{m.managerName || m.managerUsername}</Tag>
                 {m.isPrimary && <Tag color="gold" style={{ fontSize: 9 }}>Primary</Tag>}
-                {presentIds.has(m.managerId) ? <Tag color="green" style={{ fontSize: 9 }}>Online</Tag> : <Tag style={{ fontSize: 9 }}>Away</Tag>}
               </div>
             ))}
           </div>
         </div>
       </Card>
 
-      {/* Team selector + search */}
+      {/* Team members section — leads see reportees, employees see teammates */}
       <div className="page-header" style={{ borderBottom: 'none', marginBottom: 12, paddingBottom: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Select value={selectedTeam} onChange={setSelectedTeam} showSearch optionFilterProp="label"
-            style={{ width: 250 }} placeholder="Select team..."
-            disabled={!user?.roles?.some((r: any) => ['super admin', 'Admin', 'Application Manager', 'Team Lead', 'Hr Manager'].includes(r.name))}
-            options={(teams || []).map((t: any) => ({ label: `${t.teamName} (${(teamGroups.get(t.id) || []).length})`, value: t.id }))} />
+          <Tag color="blue" style={{ fontSize: 13, padding: '4px 12px' }}>
+            {isLead ? 'People Reporting to Me' : 'My Teammates'}
+          </Tag>
           <span style={{ fontSize: 14, fontWeight: 600, color: '#154360' }}>
-            {filteredMembers.length} member{filteredMembers.length !== 1 ? 's' : ''}
+            {filtered.length} member{filtered.length !== 1 ? 's' : ''}
           </span>
-          <Tag color="green">{filteredMembers.filter(u => presentIds.has(u.id)).length} present</Tag>
-          <Tag color="red">{filteredMembers.filter(u => !presentIds.has(u.id)).length} absent</Tag>
+          <Tag color="green">{presentCount} present</Tag>
+          <Tag color="red">{absentCount} absent</Tag>
         </div>
         <div className="page-filters">
           <Input prefix={<SearchOutlined />} placeholder="Search name or role..." allowClear
@@ -123,55 +128,45 @@ export default function MyTeam() {
         </div>
       </div>
 
-      {/* Team members grouped by role */}
-      {isLoading ? <div style={{ textAlign: 'center', padding: 60 }}><Spin size="large" /></div> : (
+      {loading ? <div style={{ textAlign: 'center', padding: 60 }}><Spin size="large" /></div> : (
         <div>
-          {[...roleGroups.entries()].sort((a, b) => b[1].length - a[1].length).map(([role, members]) => (
+          {[...roleGroups.entries()].sort((a, b) => b[1].length - a[1].length).map(([role, grpMembers]) => (
             <div key={role} style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <Tag color="purple" style={{ fontSize: 13, padding: '2px 10px' }}>{role}</Tag>
-                <span style={{ fontSize: 12, color: '#8c8c8c' }}>{members.length} member{members.length !== 1 ? 's' : ''}</span>
+                <span style={{ fontSize: 12, color: '#8c8c8c' }}>{grpMembers.length} member{grpMembers.length !== 1 ? 's' : ''}</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
-                {members.sort((a: any, b: any) => (a.displayName || '').localeCompare(b.displayName || '')).map((u: any) => {
-                  const isPresent = presentIds.has(u.id);
-                  const ciTime = checkinMap.get(u.id);
-                  return (
-                    <div key={u.id} style={{
-                      display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-                      borderRadius: 10, border: `1px solid ${isPresent ? '#d9f7be' : '#f0f0f0'}`,
-                      background: isPresent ? '#f6ffed' : '#fff',
-                    }}>
-                      <Avatar size={36} style={{ background: isPresent ? '#52c41a' : '#bfbfbf', fontWeight: 600, fontSize: 14, flexShrink: 0 }}>
-                        {(u.displayName || u.username)?.[0]?.toUpperCase()}
-                      </Avatar>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {u.displayName || u.username}
-                        </div>
-                        <div style={{ fontSize: 11, color: '#8c8c8c' }}>@{u.username}</div>
+                {grpMembers.sort((a: any, b: any) => (a.displayName || '').localeCompare(b.displayName || '')).map((u: any) => (
+                  <div key={u.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                    borderRadius: 10, border: `1px solid ${u.isPresent ? '#d9f7be' : '#f0f0f0'}`,
+                    background: u.isPresent ? '#f6ffed' : '#fff',
+                  }}>
+                    <Avatar size={36} style={{ background: u.isPresent ? '#52c41a' : '#bfbfbf', fontWeight: 600, fontSize: 14, flexShrink: 0 }}>
+                      {(u.displayName || u.username)?.[0]?.toUpperCase()}
+                    </Avatar>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {u.displayName || u.username}
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        {isPresent ? (
-                          <Tag color="green" icon={<CheckCircleOutlined />} style={{ margin: 0 }}>{ciTime}</Tag>
-                        ) : (
-                          <Tag icon={<CloseCircleOutlined />} style={{ margin: 0 }}>Absent</Tag>
-                        )}
-                      </div>
+                      <div style={{ fontSize: 11, color: '#8c8c8c' }}>@{u.username}</div>
                     </div>
-                  );
-                })}
+                    <div style={{ textAlign: 'right' }}>
+                      {u.isPresent ? (
+                        <Tag color="green" icon={<CheckCircleOutlined />} style={{ margin: 0 }}>{u.checkinTime}</Tag>
+                      ) : (
+                        <Tag icon={<CloseCircleOutlined />} style={{ margin: 0 }}>Absent</Tag>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))}
-          {roleGroups.size === 0 && selectedTeam && (
+          {filtered.length === 0 && (
             <div style={{ textAlign: 'center', padding: 40, color: '#8c8c8c' }}>
-              {search ? 'No members match your search' : 'No members in this team'}
-            </div>
-          )}
-          {!selectedTeam && (
-            <div style={{ textAlign: 'center', padding: 40, color: '#8c8c8c' }}>
-              Select a team to see its members
+              {search ? 'No members match your search' : isLead ? 'No one reports to you yet' : 'No teammates found'}
             </div>
           )}
         </div>

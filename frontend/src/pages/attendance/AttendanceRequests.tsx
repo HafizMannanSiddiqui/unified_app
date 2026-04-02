@@ -13,17 +13,23 @@ const statusMap: Record<number, { label: string; color: string }> = {
   3: { label: 'Rejected', color: 'red' },
 };
 
+const ADMIN_ROLES = ['super admin', 'Admin', 'Application Manager'];
+
 export default function AttendanceRequests() {
   const user = useAuthStore((s) => s.user);
   const location = useLocation();
-  const isAdmin = location.pathname.startsWith('/admin');
+  const isLeadView = location.pathname.startsWith('/admin');
+  const isAdmin = user?.roles?.some((r: any) => ADMIN_ROLES.includes(r.name));
   const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [form] = Form.useForm();
 
+  // Lead view: only reportees. Admin view: all. Employee view: own
   const { data: requests, isLoading } = useQuery({
-    queryKey: ['attRequests', isAdmin],
-    queryFn: () => isAdmin ? getAllAttendanceRequests() : getAttendanceRequests({ requesterId: user?.id }),
+    queryKey: ['attRequests', isLeadView, isAdmin ? 'admin' : user?.id],
+    queryFn: () => isLeadView
+      ? getAllAttendanceRequests(undefined, isAdmin ? undefined : user?.id)
+      : getAttendanceRequests({ requesterId: user?.id }),
     enabled: !!user?.id,
   });
 
@@ -61,7 +67,7 @@ export default function AttendanceRequests() {
     <div>
       <div className="page-header">
         <div className="page-title">Attendance Requests</div>
-        {!isAdmin && (
+        {!isLeadView && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowModal(true)}
             style={{ background: '#e74c3c', borderColor: '#e74c3c', borderRadius: 20 }}>
             New Request
@@ -74,7 +80,7 @@ export default function AttendanceRequests() {
           <thead>
             <tr style={{ background: '#154360', color: '#fff' }}>
               <th style={{ padding: '8px 12px', fontWeight: 600, fontSize: 13, width: 40 }}>#</th>
-              {isAdmin && <th style={{ padding: '8px 12px', fontWeight: 600, fontSize: 13 }}>Requester Name</th>}
+              {isLeadView && <th style={{ padding: '8px 12px', fontWeight: 600, fontSize: 13 }}>Requester Name</th>}
               <th style={{ padding: '8px 12px', fontWeight: 600, fontSize: 13 }}>Attendance Type</th>
               <th style={{ padding: '8px 12px', fontWeight: 600, fontSize: 13 }}>Checkin Date</th>
               <th style={{ padding: '8px 12px', fontWeight: 600, fontSize: 13 }}>Checkin Time</th>
@@ -82,18 +88,18 @@ export default function AttendanceRequests() {
               <th style={{ padding: '8px 12px', fontWeight: 600, fontSize: 13 }}>Checkout Time</th>
               <th style={{ padding: '8px 12px', fontWeight: 600, fontSize: 13 }}>Approver</th>
               <th style={{ padding: '8px 12px', fontWeight: 600, fontSize: 13 }}>Status</th>
-              {isAdmin && <th style={{ padding: '8px 12px', fontWeight: 600, fontSize: 13, textAlign: 'center' }}>Action</th>}
+              {isLeadView && <th style={{ padding: '8px 12px', fontWeight: 600, fontSize: 13, textAlign: 'center' }}>Action</th>}
             </tr>
           </thead>
           <tbody>
             {(requests || []).length === 0 ? (
-              <tr><td colSpan={isAdmin ? 10 : 8} style={{ textAlign: 'center', padding: 40, color: '#8c8c8c' }}>No data available in table</td></tr>
+              <tr><td colSpan={isLeadView ? 10 : 8} style={{ textAlign: 'center', padding: 40, color: '#8c8c8c' }}>No data available in table</td></tr>
             ) : (requests || []).map((r: any, i: number) => {
               const st = statusMap[r.status] || { label: 'Unknown', color: 'default' };
               return (
                 <tr key={r.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                   <td style={{ padding: '7px 12px', fontSize: 13 }}>{i + 1}</td>
-                  {isAdmin && <td style={{ padding: '7px 12px', fontSize: 13 }}>{r.requester?.displayName || r.requester?.username}</td>}
+                  {isLeadView && <td style={{ padding: '7px 12px', fontSize: 13 }}>{r.requester?.displayName || r.requester?.username}</td>}
                   <td style={{ padding: '7px 12px', fontSize: 13 }}>{r.attendanceType}</td>
                   <td style={{ padding: '7px 12px', fontSize: 13 }}>{r.checkinDate ? dayjs(r.checkinDate).format('DD-MMM-YYYY') : '-'}</td>
                   <td style={{ padding: '7px 12px', fontSize: 13 }}>{r.checkinTime || '-'}</td>
@@ -101,7 +107,7 @@ export default function AttendanceRequests() {
                   <td style={{ padding: '7px 12px', fontSize: 13 }}>{r.checkoutTime || '-'}</td>
                   <td style={{ padding: '7px 12px', fontSize: 13 }}>{r.approver?.displayName || '-'}</td>
                   <td style={{ padding: '7px 12px', fontSize: 13 }}><Tag color={st.color}>{st.label}</Tag></td>
-                  {isAdmin && (
+                  {isLeadView && (
                     <td style={{ padding: '7px 12px', fontSize: 13, textAlign: 'center' }}>
                       {r.status === 1 && (
                         <>

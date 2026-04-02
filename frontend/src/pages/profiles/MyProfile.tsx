@@ -242,7 +242,9 @@ export default function MyProfile() {
                   </Form.Item>
                   <Form.Item name="fatherName" label={L("Father's Name")}><Input /></Form.Item>
                   <Form.Item name="nationality" label={L('Nationality')}><Input /></Form.Item>
-                  <Form.Item name="jobTitle" label={L('Job Title')}><Input /></Form.Item>
+                  <Form.Item name="jobTitle" label={L('Designation / Job Title')}>
+                    <Input disabled placeholder="Set from Employee Mgmt" />
+                  </Form.Item>
                   <Form.Item name="dateOfJoining" label={L('Date of Joining (HR only)')}>
                     <DatePicker style={{ width: '100%' }} format="DD MMM, YYYY"
                       disabled={!user?.roles?.some((r: any) => ['super admin', 'Admin', 'Hr Manager'].includes(r.name))} />

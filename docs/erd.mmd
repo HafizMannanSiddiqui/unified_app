@@ -1,0 +1,237 @@
+erDiagram
+    teams {
+        int id PK
+        varchar team_name
+        int parent_id FK
+        varchar legacy_team_id
+        boolean is_active
+    }
+    roles {
+        int id PK
+        varchar name
+        boolean is_active
+    }
+    users {
+        int id PK
+        varchar username UK
+        varchar email
+        varchar display_name
+        varchar password_hash
+        int team_id FK
+        int designation_id FK
+        int report_to FK
+        boolean is_active
+    }
+    designations {
+        int id PK
+        varchar name
+        int team_id FK
+    }
+    user_has_role {
+        int id PK
+        int user_id FK
+        int role_id FK
+    }
+    user_team_memberships {
+        int id PK
+        int user_id FK
+        int team_id FK
+        varchar role_in_team
+        boolean is_primary
+    }
+    user_managers {
+        int id PK
+        int user_id FK
+        int manager_id FK
+        boolean is_primary
+    }
+    time_entries {
+        int id PK
+        int user_id FK
+        int program_id FK
+        int project_id FK
+        int sub_project_id FK
+        int team_id FK
+        int wbs_id FK
+        date entry_date
+        decimal hours
+        int status
+        int approver_id FK
+    }
+    programs {
+        int id PK
+        varchar program_name
+    }
+    projects {
+        int id PK
+        int program_id FK
+        varchar project_name
+    }
+    sub_projects {
+        int id PK
+        int program_id FK
+        int project_id FK
+        varchar sub_project_name
+    }
+    wbs {
+        int id PK
+        varchar description
+    }
+    attendance {
+        int id PK
+        int user_id FK
+        date checkin_date
+        time checkin_time
+        time checkout_time
+        enum checkin_state
+        int status
+    }
+    attendance_requests {
+        int id PK
+        int requester_id FK
+        int approver_id FK
+        varchar attendance_type
+        int status
+    }
+    leaves {
+        int id PK
+        int user_id FK
+        date from_date
+        date to_date
+        int number_of_days
+        enum leave_type
+        enum status
+        int confirmed_by FK
+    }
+    profiles {
+        int id PK
+        int user_id FK
+        varchar cnic
+        varchar contact_no
+        varchar blood_group
+        varchar job_title
+        date date_of_joining
+    }
+    profile_education {
+        int id PK
+        int profile_id FK
+        varchar degree
+        varchar board
+    }
+    profile_experience {
+        int id PK
+        int profile_id FK
+        varchar organization
+        varchar designation
+    }
+    profile_visas {
+        int id PK
+        int profile_id FK
+        varchar visa_country
+    }
+    holidays {
+        int id PK
+        int year
+        date from_date
+        date to_date
+        varchar description
+    }
+    wfh_records {
+        int id PK
+        int user_id FK
+        date date
+        int assigned_by FK
+        text tasks
+        text deliverables
+        int status
+    }
+    weekend_assignments {
+        int id PK
+        int user_id FK
+        date weekend_date
+        int assigned_by FK
+        enum attendance_type
+    }
+    employee_history {
+        int id PK
+        int user_id FK
+        varchar field_name
+        varchar old_value
+        varchar new_value
+        int changed_by FK
+        date effective_date
+    }
+    team_change_requests {
+        int id PK
+        varchar request_type
+        int target_user_id FK
+        int requested_by FK
+        int team_id FK
+        int manager_id FK
+        int status
+        int reviewed_by FK
+    }
+    audit_logs {
+        int id PK
+        int user_id FK
+        varchar action
+        int target_id
+        text details
+    }
+    device_users {
+        int id PK
+        int uid
+        int user_id FK
+    }
+    settings {
+        int id PK
+        varchar name
+        json value
+    }
+
+    teams ||--o{ teams : "parent"
+    teams ||--o{ users : "primary team"
+    teams ||--o{ user_team_memberships : "memberships"
+    teams ||--o{ designations : "has"
+    teams ||--o{ time_entries : "logged in"
+    teams ||--o{ team_change_requests : "target"
+
+    roles ||--o{ user_has_role : "assigned"
+
+    users ||--o{ user_has_role : "has roles"
+    users ||--o{ user_team_memberships : "member of"
+    users ||--o{ user_managers : "reports to"
+    users ||--o{ user_managers : "manages"
+    users ||--o{ time_entries : "logs"
+    users ||--o{ time_entries : "approves"
+    users ||--o{ attendance : "marks"
+    users ||--o{ attendance_requests : "requests"
+    users ||--o{ attendance_requests : "approves"
+    users ||--o{ leaves : "applies"
+    users ||--o{ leaves : "confirms"
+    users ||--|{ profiles : "has"
+    users ||--o{ wfh_records : "assigned"
+    users ||--o{ wfh_records : "assigns"
+    users ||--o{ weekend_assignments : "works"
+    users ||--o{ employee_history : "tracked"
+    users ||--o{ employee_history : "changes"
+    users ||--o{ team_change_requests : "target"
+    users ||--o{ team_change_requests : "requests"
+    users ||--o{ audit_logs : "performs"
+    users ||--|{ device_users : "linked"
+
+    designations ||--o{ users : "holds"
+
+    programs ||--o{ projects : "contains"
+    programs ||--o{ sub_projects : "contains"
+    programs ||--o{ time_entries : "logged"
+
+    projects ||--o{ sub_projects : "contains"
+    projects ||--o{ time_entries : "logged"
+
+    sub_projects ||--o{ time_entries : "logged"
+    wbs ||--o{ time_entries : "categorized"
+
+    profiles ||--o{ profile_education : "has"
+    profiles ||--o{ profile_experience : "has"
+    profiles ||--o{ profile_visas : "has"

@@ -6,11 +6,16 @@ export class GtlService {
   constructor(private prisma: PrismaService) {}
 
   // --- Time Entries ---
-  async findTimeEntries(filters: { userId?: number; from?: string; to?: string; status?: number; teamId?: number; page?: number; pageSize?: number }) {
+  async findTimeEntries(filters: { userId?: number; from?: string; to?: string; status?: number; teamId?: number; managerId?: number; page?: number; pageSize?: number }) {
     const where: any = {};
     if (filters.userId) where.userId = filters.userId;
     if (filters.status !== undefined) where.status = filters.status;
-    if (filters.teamId) where.teamId = filters.teamId;
+    if (filters.managerId) {
+      // Scope to reportees of this manager via junction table
+      const reportees = await this.prisma.$queryRaw<{ user_id: number }[]>`
+        SELECT user_id FROM user_managers WHERE manager_id = ${filters.managerId}`;
+      where.userId = { in: reportees.map(r => r.user_id) };
+    } else if (filters.teamId) where.teamId = filters.teamId;
     if (filters.from || filters.to) {
       where.entryDate = {};
       if (filters.from) where.entryDate.gte = new Date(filters.from);
@@ -37,13 +42,38 @@ export class GtlService {
     return { items, total, page, pageSize };
   }
 
-  createTimeEntry(data: any) {
+  async createTimeEntry(data: any) {
+    // Validate hours against actual attendance
+    const entryDate = new Date(data.entryDate);
+    const dateStr = entryDate.toISOString().slice(0, 10);
+    const att = await this.prisma.$queryRaw<any[]>`
+      SELECT EXTRACT(EPOCH FROM (
+        (COALESCE(checkout_date, checkin_date) + COALESCE(checkout_time, checkin_time))
+        - (checkin_date + checkin_time)
+      )) as duration_secs, checkout_time, checkout_state
+      FROM attendance WHERE user_id = ${data.userId} AND checkin_date = ${dateStr}::date LIMIT 1`;
+
+    if (att.length > 0) {
+      const record = att[0];
+      // Block if missed checkout
+      if (record.checkout_state === 'auto') {
+        return { error: 'Missed checkout on this date. Fix your attendance first.' };
+      }
+      // Validate hours don't exceed attendance
+      if (record.duration_secs) {
+        const maxHours = Math.round(Number(record.duration_secs) / 1800) * 0.5;
+        if (Number(data.hours) > maxHours && maxHours > 0) {
+          data.hours = maxHours; // Force to actual worked hours
+        }
+      }
+    }
+
     return this.prisma.timeEntry.create({
       data: {
         userId: data.userId, programId: data.programId, teamId: data.teamId,
         projectId: data.projectId, subProjectId: data.subProjectId,
         workType: data.workType, productPhase: data.productPhase,
-        entryDate: new Date(data.entryDate), description: data.description,
+        entryDate, description: data.description,
         wbsId: data.wbsId, hours: data.hours, approverId: data.approverId, status: 0,
       },
     });
@@ -180,9 +210,16 @@ export class GtlService {
   }
 
   // Get users with pending entries (for approval page dropdown)
-  async getUsersWithPendingEntries() {
+  // If managerId is provided, only show reportees of that manager
+  async getUsersWithPendingEntries(managerId?: number) {
+    const where: any = { status: 0 };
+    if (managerId) {
+      const reportees = await this.prisma.$queryRaw<{ user_id: number }[]>`
+        SELECT user_id FROM user_managers WHERE manager_id = ${managerId}`;
+      where.userId = { in: reportees.map(r => r.user_id) };
+    }
     const users = await this.prisma.timeEntry.findMany({
-      where: { status: 0 },
+      where,
       select: { userId: true, user: { select: { id: true, username: true, displayName: true } } },
       distinct: ['userId'],
       orderBy: { userId: 'asc' },
@@ -376,9 +413,13 @@ export class GtlService {
   }
 
   // --- Team Report ---
-  async getTeamReport(from: string, to: string, teamId?: number) {
+  async getTeamReport(from: string, to: string, teamId?: number, managerId?: number) {
     const where: any = { entryDate: { gte: new Date(from), lte: new Date(to) } };
-    if (teamId) where.teamId = teamId;
+    if (managerId) {
+      const reportees = await this.prisma.$queryRaw<{ user_id: number }[]>`
+        SELECT user_id FROM user_managers WHERE manager_id = ${managerId}`;
+      where.userId = { in: reportees.map(r => r.user_id) };
+    } else if (teamId) where.teamId = teamId;
 
     const entries = await this.prisma.timeEntry.findMany({
       where,

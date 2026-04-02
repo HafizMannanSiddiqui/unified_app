@@ -11,6 +11,7 @@ const testConnection = (ip: string) => apiClient.post('/attendance/zkteco/test-c
 const syncDevice = (deviceId: number) => apiClient.post('/attendance/zkteco/sync', { deviceId }).then(r => r.data);
 const syncAllDevices = () => apiClient.post('/attendance/zkteco/sync-all').then(r => r.data);
 const getDeviceInfo = (ip: string) => apiClient.get('/attendance/zkteco/device-info', { params: { ip } }).then(r => r.data);
+const createDevice = (data: any) => apiClient.post('/users/devices', data).then(r => r.data);
 const updateDevice = (id: number, data: any) => apiClient.put(`/users/devices/${id}`, data).then(r => r.data);
 const getDeviceUsers = (search?: string) => apiClient.get('/users/device-users', { params: { search } }).then(r => r.data);
 const createDeviceUser = (data: any) => apiClient.post('/users/device-users', data).then(r => r.data);
@@ -21,13 +22,20 @@ export default function DeviceManagement() {
   const qc = useQueryClient();
   const [editDevice, setEditDevice] = useState<any>(null);
   const [deviceForm] = Form.useForm();
+  const [addDeviceModal, setAddDeviceModal] = useState(false);
+  const [addDeviceForm] = Form.useForm();
   const [addUserModal, setAddUserModal] = useState(false);
   const [addUserForm] = Form.useForm();
   const [search, setSearch] = useState('');
 
   const { data: devices } = useQuery({ queryKey: ['devices'], queryFn: getDevices });
   const { data: deviceUsers, isLoading } = useQuery({ queryKey: ['deviceUsers', search], queryFn: () => getDeviceUsers(search || undefined) });
-  const { data: allUsers } = useQuery({ queryKey: ['usersAll'], queryFn: () => getUsers(1, 1000) });
+  const { data: allUsers } = useQuery({ queryKey: ['usersAll'], queryFn: () => getUsers(1, 5000) });
+
+  const createDeviceMut = useMutation({
+    mutationFn: (data: any) => createDevice({ name: `device${(devices || []).length + 1}`, displayName: data.displayName, value: { ip: data.ip }, description: data.description }),
+    onSuccess: () => { message.success('Device added'); setAddDeviceModal(false); addDeviceForm.resetFields(); qc.invalidateQueries({ queryKey: ['devices'] }); },
+  });
 
   const updateDeviceMut = useMutation({
     mutationFn: ({ id, ...data }: any) => updateDevice(id, data),
@@ -58,8 +66,11 @@ export default function DeviceManagement() {
           key: 'devices', label: 'Devices', icon: <WifiOutlined />,
           children: (
             <>
-              <div style={{ marginBottom: 16 }}>
-                <Button type="primary" style={{ background: '#154360', borderColor: '#154360', borderRadius: 20 }}
+              <div style={{ marginBottom: 16, display: 'flex', gap: 10 }}>
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddDeviceModal(true)}>
+                  Add Device
+                </Button>
+                <Button style={{ borderRadius: 20 }}
                   onClick={async () => { message.loading('Syncing all devices...', 0); try { const r = await syncAllDevices(); message.destroy(); message.success(`Synced ${r.length} devices`); } catch { message.destroy(); message.error('Sync failed'); } }}>
                   Sync All Devices
                 </Button>
@@ -198,6 +209,22 @@ export default function DeviceManagement() {
           ),
         },
       ]} />
+
+      {/* Add Device Modal */}
+      <Modal title="Add ZKTeco Device" open={addDeviceModal} onCancel={() => setAddDeviceModal(false)}
+        onOk={() => addDeviceForm.submit()} confirmLoading={createDeviceMut.isPending}>
+        <Form form={addDeviceForm} layout="vertical" onFinish={(v) => createDeviceMut.mutate(v)} style={{ marginTop: 16 }}>
+          <Form.Item name="displayName" label="Device Name" rules={[{ required: true }]}>
+            <Input placeholder="e.g. Main Entrance, Back Door..." />
+          </Form.Item>
+          <Form.Item name="ip" label="Device IP Address" rules={[{ required: true }]}>
+            <Input placeholder="e.g. 192.168.1.201" />
+          </Form.Item>
+          <Form.Item name="description" label="Description">
+            <Input placeholder="Location or notes about this device" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

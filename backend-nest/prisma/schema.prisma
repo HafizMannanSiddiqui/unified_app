@@ -79,6 +79,7 @@ enum ProfileRecordType {
 model Team {
   id            Int      @id @default(autoincrement())
   teamName      String   @map("team_name") @db.VarChar(255)
+  parentId      Int?     @map("parent_id")
   legacyTeamId  String?  @map("legacy_team_id") @db.VarChar(100)
   sourceSystem  String?  @map("source_system") @db.VarChar(10)
   displayOrder  Int      @default(0) @map("display_order")
@@ -87,12 +88,16 @@ model Team {
   updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz
 
   // Relations
+  parent                   Team?                     @relation("TeamHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children                 Team[]                    @relation("TeamHierarchy")
   users                    User[]                    @relation("UserTeam")
   designations             Designation[]
   timeEntries              TimeEntry[]
   teamSubProjectAssignments TeamSubProjectAssignment[]
   memberships              UserTeamMembership[]      @relation("TeamMemberships")
+  teamChangeRequests       TeamChangeRequest[]
 
+  @@index([parentId])
   @@index([legacyTeamId])
   @@index([isActive])
   @@map("teams")
@@ -373,6 +378,9 @@ model User {
   wfhRecords             WfhRecord[] @relation("WfhUser")
   wfhAssigned            WfhRecord[] @relation("WfhAssigner")
   auditLogs              AuditLog[] @relation("AuditUser")
+  teamChangeRequestsTarget    TeamChangeRequest[] @relation("TCRTarget")
+  teamChangeRequestsRequester TeamChangeRequest[] @relation("TCRRequester")
+  teamChangeRequestsReviewer  TeamChangeRequest[] @relation("TCRReviewer")
 
   @@index([username])
   @@index([email])
@@ -922,4 +930,32 @@ model EmployeeHistory {
   @@index([userId])
   @@index([fieldName])
   @@map("employee_history")
+}
+
+// ============================================================================
+// TABLE 34: team_change_requests (leads request, admins approve)
+// ============================================================================
+
+model TeamChangeRequest {
+  id            Int       @id @default(autoincrement())
+  requestType   String    @map("request_type") @db.VarChar(50)  // add_to_team, remove_from_team, add_manager, remove_manager
+  targetUserId  Int       @map("target_user_id")
+  requestedBy   Int       @map("requested_by")
+  teamId        Int?      @map("team_id")
+  managerId     Int?      @map("manager_id")
+  reason        String?   @db.Text
+  status        Int       @default(0) @db.SmallInt  // 0=pending, 1=approved, 2=rejected
+  reviewedBy    Int?      @map("reviewed_by")
+  reviewedAt    DateTime? @map("reviewed_at") @db.Timestamptz
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  targetUser User  @relation("TCRTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  requester  User  @relation("TCRRequester", fields: [requestedBy], references: [id], onDelete: Cascade)
+  reviewer   User? @relation("TCRReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  team       Team? @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  @@index([targetUserId])
+  @@index([requestedBy])
+  @@index([status])
+  @@map("team_change_requests")
 }

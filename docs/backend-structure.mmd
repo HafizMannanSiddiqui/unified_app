@@ -1,0 +1,61 @@
+graph TD
+    style A fill:#154360,color:#fff,stroke:none,font-weight:bold
+    style B fill:#1a5276,color:#fff,stroke:none
+    style C fill:#1a5276,color:#fff,stroke:none
+    style D fill:#1a5276,color:#fff,stroke:none
+    style E fill:#1a5276,color:#fff,stroke:none
+    style F fill:#1a5276,color:#fff,stroke:none
+    style G fill:#1a5276,color:#fff,stroke:none
+    style H fill:#1a5276,color:#fff,stroke:none
+    style I fill:#1a5276,color:#fff,stroke:none
+
+    A["backend-nest/src/"]
+
+    A --> B["auth/"]
+    B --> B1["auth.module.ts"]
+    B --> B2["auth.service.ts - Login, JWT, Argon2id,\nForgotPassword, MD5 auto-upgrade"]
+    B --> B3["auth.controller.ts"]
+    B --> B4["jwt.strategy.ts"]
+
+    A --> C["users/"]
+    C --> C1["users.module.ts"]
+    C --> C2["users.service.ts - CRUD, team/manager\nmemberships, admin changes,\nTeamChangeRequests, history logging"]
+    C --> C3["users.controller.ts"]
+
+    A --> D["attendance/"]
+    D --> D1["attendance.module.ts"]
+    D --> D2["attendance.service.ts - Checkin/out,\ndaily report, WFH, lead insights,\nghost employees, person detail,\nemployees report, anti-gaming"]
+    D --> D3["attendance.controller.ts"]
+    D --> D4["zkteco.service.ts - Device sync,\nnode-zklib integration"]
+
+    A --> E["gtl/"]
+    E --> E1["gtl.module.ts"]
+    E --> E2["gtl.service.ts - Time entries CRUD,\nweekly grouping, approvals,\nresource allocation, reports"]
+    E --> E3["gtl.controller.ts"]
+
+    A --> F["leaves/"]
+    F --> F1["leaves.module.ts"]
+    F --> F2["leaves.service.ts - CRUD, approve/reject,\nbalance calculation"]
+    F --> F3["leaves.controller.ts"]
+
+    A --> G["profiles/"]
+    G --> G1["profiles.module.ts"]
+    G --> G2["profiles.service.ts - Profile upsert,\neducation/experience/visa CRUD,\ncompletion %, tenure"]
+    G --> G3["profiles.controller.ts"]
+
+    A --> H["teams/ + roles/"]
+    H --> H1["teams.service.ts - CRUD + hierarchy"]
+    H --> H2["teams.controller.ts"]
+    H --> H3["roles.service.ts - Roles + permissions"]
+    H --> H4["roles.controller.ts"]
+
+    A --> I["common/"]
+    I --> I1["jwt-auth.guard.ts"]
+    I --> I2["roles.guard.ts - @Roles decorator"]
+    I --> I3["ownership.helper.ts - Role constants"]
+
+    A --> J["prisma/"]
+    J --> J1["prisma.service.ts"]
+    J --> J2["prisma.module.ts"]
+
+    A --> K["prisma/schema.prisma\n34 models, PostgreSQL"]

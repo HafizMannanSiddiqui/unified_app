@@ -5,10 +5,14 @@ import { useState } from 'react';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import { getWeekendAssignments, createWeekendAssignment, deleteWeekendAssignment } from '../../api/attendance';
-import { getUsers } from '../../api/users';
 import { useAuthStore } from '../../store/authStore';
+import apiClient from '../../api/client';
 
 dayjs.extend(isoWeek);
+
+const ADMIN_ROLES = ['super admin', 'Admin', 'Application Manager'];
+const getMyReportees = (managerId: number) =>
+  apiClient.get('/users/my-team-members', { params: { managerId } }).then(r => r.data);
 
 export default function WeekendAssignments() {
   const user = useAuthStore((s) => s.user);
@@ -18,13 +22,19 @@ export default function WeekendAssignments() {
   const [year, setYear] = useState(new Date().getFullYear());
 
   const isLead = user?.roles?.some((r: any) => ['super admin', 'Admin', 'Team Lead', 'Hr Manager'].includes(r.name));
+  const isAdmin = user?.roles?.some((r: any) => ADMIN_ROLES.includes(r.name));
 
   const { data: assignments, isLoading } = useQuery({
     queryKey: ['weekendAssignments', year],
-    queryFn: () => getWeekendAssignments(undefined, year),
+    queryFn: () => getWeekendAssignments(isAdmin ? undefined : user?.id, year),
   });
 
-  const { data: users } = useQuery({ queryKey: ['usersAll'], queryFn: () => getUsers(1, 1000) });
+  // Only load reportees for the employee dropdown
+  const { data: reportees } = useQuery({
+    queryKey: ['myReportees', user?.id],
+    queryFn: () => getMyReportees(user!.id),
+    enabled: isLead && !!user?.id,
+  });
 
   const createMut = useMutation({
     mutationFn: createWeekendAssignment,
@@ -111,7 +121,7 @@ export default function WeekendAssignments() {
         <Form form={form} onFinish={handleSubmit} layout="vertical" className="clean-form" style={{ marginTop: 16 }}>
           <Form.Item name="userId" label="Employee" rules={[{ required: true }]}>
             <Select placeholder="-- Choose --" showSearch optionFilterProp="label"
-              options={(users?.items || []).map((u: any) => ({ label: u.displayName || u.username, value: u.id }))} />
+              options={(reportees || []).map((u: any) => ({ label: `${u.displayName || u.username} — ${u.teamName || ''}`, value: u.id }))} />
           </Form.Item>
           <div className="form-grid">
             <Form.Item name="weekendDate" label="Weekend Date" rules={[{ required: true }]}>

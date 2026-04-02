@@ -1,4 +1,13 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
+/* ── Brand CSS Variables (switched per company at runtime) ── */
+:root {
+  --brand-primary: #154360;
+  --brand-primary-light: #1a5276;
+  --brand-primary-bg: #EBF5FB;
+  --brand-primary-bg-light: #d4eaf7;
+  --brand-accent: #e74c3c;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; transition: background-color 0.2s, border-color 0.2s, color 0.2s; }
 html, body, #root { width: 100%; height: 100%; overflow-x: hidden; }
 
 /* ── GTL Page Styles ── */
@@ -7,7 +16,7 @@ html, body, #root { width: 100%; height: 100%; overflow-x: hidden; }
   font-weight: 700;
   color: #1C2833;
   padding-bottom: 10px;
-  border-bottom: 3px solid #154360;
+  border-bottom: 3px solid var(--brand-primary);
   margin-bottom: 20px;
   position: relative;
   z-index: 0;
@@ -22,7 +31,7 @@ html, body, #root { width: 100%; height: 100%; overflow-x: hidden; }
   flex-wrap: wrap;
   margin-bottom: 20px;
   padding-bottom: 10px;
-  border-bottom: 3px solid #154360;
+  border-bottom: 3px solid var(--brand-primary);
 }
 .page-header .page-title {
   font-size: 22px;
@@ -38,7 +47,7 @@ html, body, #root { width: 100%; height: 100%; overflow-x: hidden; }
 
 /* Week group headers */
 .week-header {
-  background: #154360;
+  background: var(--brand-primary);
   color: #fff;
   padding: 8px 14px;
   border-radius: 4px;
@@ -48,18 +57,18 @@ html, body, #root { width: 100%; height: 100%; overflow-x: hidden; }
   user-select: none;
   transition: background 0.2s;
 }
-.week-header:hover { background: #1a5276; }
+.week-header:hover { background: var(--brand-primary-light); }
 .week-header .week-label { font-weight: 700; min-width: 90px; }
 .week-header .week-range { flex: 1; }
 .week-header .week-hours { font-weight: 600; background: rgba(255,255,255,0.15); padding: 2px 12px; border-radius: 10px; font-size: 13px; }
 
 /* Week total row */
-.week-total-row { background: #EBF5FB; text-align: right; padding: 6px 16px; font-weight: 600; }
-.grand-total-row { background: #AED6F1; text-align: right; padding: 10px 16px; font-weight: 700; font-size: 15px; border-radius: 4px; margin-top: 8px; }
+.week-total-row { background: var(--brand-primary-bg); text-align: right; padding: 6px 16px; font-weight: 600; }
+.grand-total-row { background: var(--brand-primary-bg-light); text-align: right; padding: 10px 16px; font-weight: 700; font-size: 15px; border-radius: 4px; margin-top: 8px; }
 
 /* Table styling */
 .gtl-table .ant-table-thead > tr > th {
-  background: #154360 !important;
+  background: var(--brand-primary) !important;
   color: #fff !important;
   font-weight: 600 !important;
   font-size: 13px !important;
@@ -128,7 +137,7 @@ html, body, #root { width: 100%; height: 100%; overflow-x: hidden; }
 .clean-form .ant-picker-focused,
 .clean-form .ant-input:focus,
 .clean-form textarea.ant-input:focus {
-  border-color: #154360 !important;
+  border-color: var(--brand-primary) !important;
   box-shadow: rgba(21, 67, 96, 0.15) 0px 0px 12px !important;
 }
 /* Description counter */
@@ -149,8 +158,8 @@ html, body, #root { width: 100%; height: 100%; overflow-x: hidden; }
 
 /* Submit button (red like old GTL) */
 .submit-btn {
-  background: #e74c3c !important;
-  border-color: #e74c3c !important;
+  background: var(--brand-accent) !important;
+  border-color: var(--brand-accent) !important;
   border-radius: 20px !important;
   padding: 6px 48px !important;
   height: 42px !important;
@@ -158,7 +167,7 @@ html, body, #root { width: 100%; height: 100%; overflow-x: hidden; }
   font-weight: 600 !important;
   transition: all 0.2s !important;
 }
-.submit-btn:hover { background: #c0392b !important; border-color: #c0392b !important; }
+.submit-btn:hover { opacity: 0.85 !important; }
 
 /* Stat cards */
 .stat-card { border-radius: 8px; border: 1px solid #f0f0f0; }
@@ -172,7 +181,7 @@ html, body, #root { width: 100%; height: 100%; overflow-x: hidden; }
 /* Collapse customization for timesheet */
 .timesheet-collapse .ant-collapse-item { border: none !important; margin-bottom: 6px; }
 .timesheet-collapse .ant-collapse-header {
-  background: #154360 !important;
+  background: var(--brand-primary) !important;
   color: #fff !important;
   border-radius: 4px !important;
   padding: 8px 14px !important;
@@ -185,20 +194,24 @@ html, body, #root { width: 100%; height: 100%; overflow-x: hidden; }
 /* No record found */
 .no-record-found { text-align: center; padding: 40px; color: #8c8c8c; font-size: 15px; }
 
-/* ── Sidebar: always dark teal, ignore company theme ── */
+/* ── Sidebar: themed per company ── */
+.ant-layout-sider .ant-menu-dark,
+.ant-layout-sider .ant-menu-dark .ant-menu-sub {
+  background: var(--brand-sidebar, #001529) !important;
+}
 .ant-layout-sider .ant-menu-dark .ant-menu-item-selected {
-  background-color: #154360 !important;
+  background-color: var(--brand-primary) !important;
 }
 .ant-layout-sider .ant-menu-dark .ant-menu-item:hover,
 .ant-layout-sider .ant-menu-dark .ant-menu-submenu-title:hover {
-  background-color: rgba(255,255,255,0.08) !important;
+  background-color: var(--brand-primary-light) !important;
 }
 .ant-layout-sider .ant-menu-dark .ant-menu-item-selected::after {
-  border-right-color: #154360 !important;
+  border-right-color: var(--brand-primary) !important;
 }
 /* Hide the ugly default collapse trigger, replace with clean icon */
 .ant-layout-sider-trigger {
-  background: #0a1f2f !important;
+  background: var(--brand-sidebar-trigger, #0a1f2f) !important;
   border-top: 1px solid rgba(255,255,255,0.06) !important;
   height: 40px !important;
   line-height: 40px !important;
@@ -206,3 +219,7 @@ html, body, #root { width: 100%; height: 100%; overflow-x: hidden; }
 .ant-layout-sider-trigger .anticon {
   font-size: 14px !important;
 }
+
+/* ── Smooth scrolling & transitions ── */
+html { scroll-behavior: smooth; }
+.ant-layout-content { transition: all 0.2s ease; }

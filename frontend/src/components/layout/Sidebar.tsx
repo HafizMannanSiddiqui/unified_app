@@ -1,10 +1,10 @@
 import {
-  ClockCircleOutlined, DashboardOutlined, FileTextOutlined, IdcardOutlined,
+  DashboardOutlined, FileTextOutlined, IdcardOutlined,
   ScheduleOutlined, SettingOutlined, TeamOutlined, CheckCircleOutlined,
   CalendarOutlined, UserOutlined, ProjectOutlined, BarChartOutlined,
-  AppstoreOutlined, FundProjectionScreenOutlined, LockOutlined,
+  AppstoreOutlined, FundProjectionScreenOutlined,
   ApartmentOutlined, HeatMapOutlined, PieChartOutlined, ProfileOutlined,
-  EditOutlined, HeartOutlined,
+  EditOutlined, HeartOutlined, QuestionCircleOutlined,
 } from '@ant-design/icons';
 import { Layout, Menu } from 'antd';
 import type { MenuProps } from 'antd';
@@ -14,9 +14,9 @@ import { detectCompany } from './Header';
 
 const { Sider } = Layout;
 
-// Roles that can see Time Sheet Approval + Reports (leads, admins, etc.)
-const LEAD_ROLES = ['super admin', 'Admin', 'Application Manager', 'Team Lead', 'Hr Manager', 'Report Viewer'];
-// Roles that can see full admin features (Users, Manage, Resource Allocation, etc.)
+// Leads: approve timesheets, leaves, att requests, manage their team
+const LEAD_ROLES = ['super admin', 'Admin', 'Application Manager', 'Team Lead', 'Hr Manager'];
+// Admins: system config, reports across all teams, user management
 const ADMIN_ROLES = ['super admin', 'Admin', 'Application Manager'];
 
 interface Props { collapsed: boolean; onCollapse: (c: boolean) => void; }
@@ -29,28 +29,12 @@ export default function Sidebar({ collapsed, onCollapse }: Props) {
   const isLead = user?.roles?.some((r: any) => LEAD_ROLES.includes(r.name));
   const isAdmin = user?.roles?.some((r: any) => ADMIN_ROLES.includes(r.name));
 
-  // Build menu matching old GTL structure
   const items: MenuProps['items'] = [
+    // ── EVERYONE ──
     { key: '/', icon: <DashboardOutlined />, label: 'Home' },
-    // === GTL Section ===
     { key: '/my/timesheet', icon: <FileTextOutlined />, label: 'Time Sheet' },
     { key: '/my/data-entry', icon: <EditOutlined />, label: 'Data Entry' },
 
-    // Time Sheet Approval — visible to leads + admins (like old GTL)
-    ...(isLead ? [
-      { key: '/admin/approvals', icon: <CheckCircleOutlined />, label: 'Time Sheet Approval' },
-    ] : []),
-
-    // Reports — visible to leads + admins (like old GTL)
-    ...(isLead ? [{
-      key: 'reports', icon: <BarChartOutlined />, label: 'Reports',
-      children: [
-        { key: '/admin/reports/team', icon: <TeamOutlined />, label: 'Team wise' },
-        { key: '/admin/reports/general', icon: <PieChartOutlined />, label: 'General' },
-      ],
-    }] : []),
-
-    // === HRMS Section ===
     { type: 'divider' as const },
     { key: 'hrms-label', type: 'group' as const, label: 'HRMS' },
     { key: '/my/profile', icon: <ProfileOutlined />, label: 'Personal' },
@@ -68,40 +52,58 @@ export default function Sidebar({ collapsed, onCollapse }: Props) {
     { key: '/my/holidays', icon: <CalendarOutlined />, label: 'Holidays' },
     { key: '/my/team', icon: <TeamOutlined />, label: 'My Team' },
     { key: '/my/directory', icon: <UserOutlined />, label: 'Directory' },
-    { key: '/my/blood-groups', icon: <HeartOutlined />, label: 'Blood Group' },
 
-    // Reports — leads + admins
-    ...(isLead ? [
-      { key: '/admin/lead-insights', icon: <BarChartOutlined />, label: 'Lead Insights' },
-      { key: '/admin/person-detail', icon: <UserOutlined />, label: 'Employee Detail' },
-      { key: '/admin/employees-report', icon: <BarChartOutlined />, label: 'Employees Report' },
-      { key: '/admin/ghost-employees', icon: <UserOutlined />, label: 'Ghost Employees' },
-      { key: '/admin/attendance-requests', icon: <CheckCircleOutlined />, label: 'Att. Requests (Admin)' },
+    // ── LEAD SECTION (leads who are NOT admin) ──
+    // Leads manage their reportees: approvals, insights, leaves, att requests
+    ...(isLead && !isAdmin ? [
+      { type: 'divider' as const },
+      { key: 'lead-label', type: 'group' as const, label: 'MY TEAM MANAGEMENT' },
+      { key: '/admin/approvals', icon: <CheckCircleOutlined />, label: 'Time Sheet Approval' },
+      { key: '/admin/lead-insights', icon: <BarChartOutlined />, label: 'My Team Dashboard' },
+      { key: '/admin/leaves/pending', icon: <ScheduleOutlined />, label: 'Leave Approvals' },
+      { key: '/admin/attendance-requests', icon: <CheckCircleOutlined />, label: 'Att. Requests' },
       { key: '/admin/employee-management', icon: <UserOutlined />, label: 'Employee Mgmt' },
     ] : []),
 
-    // === Administration — only for super admin / admin ===
+    // ── ADMIN SECTION ──
+    // Admins are also leads — they get team management + system tools
     ...(isAdmin ? [
       { type: 'divider' as const },
-      { key: 'admin-label', type: 'group' as const, label: 'ADMINISTRATION' },
-      { key: '/admin/timesheet', icon: <FileTextOutlined />, label: 'All Timesheets' },
-      ...(isLead ? [{
+      { key: 'team-mgmt-label', type: 'group' as const, label: 'TEAM MANAGEMENT' },
+      { key: '/admin/approvals', icon: <CheckCircleOutlined />, label: 'Time Sheet Approval' },
+      { key: '/admin/lead-insights', icon: <BarChartOutlined />, label: 'Lead Insights' },
+      { key: '/admin/leaves/pending', icon: <ScheduleOutlined />, label: 'Leave Approvals' },
+      { key: '/admin/attendance-requests', icon: <CheckCircleOutlined />, label: 'Att. Requests' },
+      { key: '/admin/employee-management', icon: <UserOutlined />, label: 'Employee Mgmt' },
+      { key: '/admin/team-change-requests', icon: <CheckCircleOutlined />, label: 'Team Requests' },
+
+      { type: 'divider' as const },
+      { key: 'reports-label', type: 'group' as const, label: 'REPORTS' },
+      { key: '/admin/reports/team', icon: <TeamOutlined />, label: 'Team Report' },
+      { key: '/admin/reports/general', icon: <PieChartOutlined />, label: 'General Report' },
+      { key: '/admin/employees-report', icon: <BarChartOutlined />, label: 'Employees Report' },
+      { key: '/admin/attendance/daily', icon: <CalendarOutlined />, label: 'Daily Attendance' },
+      {
         key: 'resource', icon: <HeatMapOutlined />, label: 'Resource Allocation',
         children: [
           { key: '/admin/resource/resource-wise', icon: <UserOutlined />, label: 'Resource wise' },
           { key: '/admin/resource/project-wise', icon: <FundProjectionScreenOutlined />, label: 'Project wise' },
         ],
-      }] : []),
+      },
+
+      { type: 'divider' as const },
+      { key: 'system-label', type: 'group' as const, label: 'SYSTEM' },
+      { key: '/admin/timesheet', icon: <FileTextOutlined />, label: 'All Timesheets' },
       {
-        key: 'hr-admin', icon: <TeamOutlined />, label: 'People',
+        key: 'people', icon: <TeamOutlined />, label: 'People',
         children: [
           { key: '/admin/users', icon: <UserOutlined />, label: 'Users' },
-          { key: '/admin/profiles', icon: <IdcardOutlined />, label: 'Profiles' },
-          { key: '/admin/leaves/pending', icon: <CheckCircleOutlined />, label: 'Leave Approvals' },
-          { key: '/admin/attendance/daily', icon: <BarChartOutlined />, label: 'Daily Attendance' },
+          { key: '/admin/ghost-employees', icon: <UserOutlined />, label: 'Ghost Employees' },
+          { key: '/admin/cv-generator', icon: <ProfileOutlined />, label: 'CV Generator' },
+          { key: '/my/blood-groups', icon: <HeartOutlined />, label: 'Blood Groups' },
         ],
       },
-      { key: '/admin/audit-log', icon: <SettingOutlined />, label: 'Audit Log' },
+      { key: '/admin/org-chart', icon: <ApartmentOutlined />, label: 'Org Chart' },
       { key: '/admin/devices', icon: <SettingOutlined />, label: 'ZKTeco Devices' },
       {
         key: 'manage', icon: <SettingOutlined />, label: 'Manage',
@@ -110,22 +112,23 @@ export default function Sidebar({ collapsed, onCollapse }: Props) {
           { key: '/admin/programs', icon: <AppstoreOutlined />, label: 'Programs' },
           { key: '/admin/projects', icon: <ProjectOutlined />, label: 'Projects' },
           { key: '/admin/subprojects', icon: <ApartmentOutlined />, label: 'Sub Projects' },
-          { key: '/admin/workstreams', icon: <ApartmentOutlined />, label: 'Workstreams' },
         ],
       },
     ] : []),
+
+    // Help — everyone
+    { type: 'divider' as const },
+    { key: '/my/help', icon: <QuestionCircleOutlined />, label: 'Help & Guide' },
   ];
 
   const path = loc.pathname;
-  const openKeys = path.startsWith('/admin/reports') ? ['reports']
-    : path.startsWith('/my/check') || path.startsWith('/my/attendance') ? ['my-attendance']
-    : path.startsWith('/my/leaves') || path.startsWith('/my/apply') ? ['my-leaves']
+  const openKeys = path.startsWith('/my/leaves') || path.startsWith('/my/apply') ? ['my-leaves']
     : path.startsWith('/admin/resource') ? ['resource']
-    : path.startsWith('/admin/users') || path.startsWith('/admin/profiles') || path.startsWith('/admin/leaves') || path.startsWith('/admin/attendance') ? ['hr-admin']
-    : path.startsWith('/admin/team') || path.startsWith('/admin/program') || path.startsWith('/admin/project') || path.startsWith('/admin/sub') || path.startsWith('/admin/work') ? ['manage']
+    : path.startsWith('/admin/users') || path.startsWith('/admin/profiles') || path.startsWith('/admin/ghost') ? ['people']
+    : path.startsWith('/admin/team') || path.startsWith('/admin/program') || path.startsWith('/admin/project') || path.startsWith('/admin/sub') ? ['manage']
     : [];
 
-  // Company logo — detect from payrollCompany OR email domain
+  // Company logo
   const iconMap: Record<string, string> = {
     Powersoft19: '/logos/ps-icon.png',
     Venturetronics: '/logos/vt-icon.png',
@@ -137,7 +140,7 @@ export default function Sidebar({ collapsed, onCollapse }: Props) {
 
   return (
     <Sider collapsible collapsed={collapsed} onCollapse={onCollapse} width={250}
-      style={{ overflow: 'auto', height: '100vh', position: 'sticky', top: 0, left: 0, background: '#001529' }}>
+      style={{ overflow: 'auto', height: '100vh', position: 'sticky', top: 0, left: 0, background: 'var(--brand-sidebar, #001529)' }}>
       <div style={{ height: 60, margin: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {logoSrc ? (
           <img src={logoSrc} alt="Logo"

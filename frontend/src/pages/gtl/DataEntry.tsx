@@ -1,16 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, DatePicker, Form, Select, Input, message, Tag } from 'antd';
-import { ClockCircleOutlined } from '@ant-design/icons';
+import { Button, DatePicker, Form, Select, Input, message, Card, Row, Col, Tag, Alert } from 'antd';
+import { ClockCircleOutlined, CheckCircleOutlined, CalendarOutlined, ProjectOutlined, FileTextOutlined } from '@ant-design/icons';
 import { createTimeEntry, getPrograms, getProjects, getSubProjects, getWbs, quickAddProject, quickAddSubProject } from '../../api/gtl';
 import { getMyAttendance } from '../../api/attendance';
 import { useAuthStore } from '../../store/authStore';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
-
-const hoursOptions = Array.from({ length: 24 }, (_, i) => ({
-  label: `${(i + 1) * 0.5}`,
-  value: (i + 1) * 0.5,
-}));
 
 export default function DataEntry() {
   const [form] = Form.useForm();
@@ -18,7 +13,6 @@ export default function DataEntry() {
   const qc = useQueryClient();
   const [programId, setProgramId] = useState<number | undefined>();
   const [projectId, setProjectId] = useState<number | undefined>();
-  const [descLength, setDescLength] = useState(0);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [newProjectName, setNewProjectName] = useState('');
   const [newSubProjectName, setNewSubProjectName] = useState('');
@@ -28,14 +22,14 @@ export default function DataEntry() {
   const { data: subProjects } = useQuery({ queryKey: ['subProjects', projectId], queryFn: () => getSubProjects(projectId), enabled: !!projectId });
   const { data: wbsList } = useQuery({ queryKey: ['wbs'], queryFn: getWbs });
 
-  // Fetch attendance for selected date to auto-fill hours
-  const { data: dayAttendance } = useQuery({
+  // Fetch attendance for selected date
+  const { data: dayAttendance, isLoading: loadingAtt } = useQuery({
     queryKey: ['dayAtt', selectedDate],
     queryFn: () => getMyAttendance(selectedDate!, selectedDate!),
     enabled: !!selectedDate,
   });
 
-  // Fetch holidays for the selected month
+  // Fetch holidays
   const selMonth = selectedDate ? dayjs(selectedDate).month() + 1 : 0;
   const selYear = selectedDate ? dayjs(selectedDate).year() : 0;
   const { data: holidays } = useQuery({
@@ -44,321 +38,251 @@ export default function DataEntry() {
     enabled: !!selectedDate,
   });
 
-  // Check if selected date is a holiday
-  const isHoliday = (() => {
-    if (!selectedDate || !holidays) return null;
-    const sel = dayjs(selectedDate);
+  // Determine date status
+  const sel = selectedDate ? dayjs(selectedDate) : null;
+  const isWeekend = sel && (sel.day() === 0 || sel.day() === 6);
+
+  const holidayName = (() => {
+    if (!sel || !holidays) return null;
     for (const h of (holidays as any[])) {
       const from = dayjs(h.fromDate);
       const to = dayjs(h.toDate);
-      if ((sel.isAfter(from.subtract(1, 'day')) || sel.isSame(from, 'day')) && (sel.isBefore(to.add(1, 'day')) || sel.isSame(to, 'day'))) {
-        return h.description;
-      }
+      if (sel.diff(from, 'day') >= 0 && to.diff(sel, 'day') >= 0) return h.description;
     }
-    // Check weekend
-    if (sel.day() === 0 || sel.day() === 6) return 'Weekend';
     return null;
   })();
 
-  // Determine blocking status
+  const isHoliday = isWeekend ? 'Weekend' : holidayName;
   const attRecord = (dayAttendance || [])[0];
   const isToday = selectedDate === dayjs().format('YYYY-MM-DD');
-  const isStillInOffice = attRecord?.checkinTime && !attRecord?.checkoutTime && !attRecord?.checkoutState;
+  const isStillInOffice = !!(attRecord?.checkinTime && !attRecord?.checkoutTime && !attRecord?.checkoutState);
   const isMissedCheckout = attRecord?.checkoutState === 'auto';
-  const isPastNoCheckout = !isToday && attRecord?.checkinTime && !attRecord?.checkoutTime;
-  const isAbsent = selectedDate && !attRecord && !isHoliday;
+  const isPastNoCheckout = !isToday && !!(attRecord?.checkinTime && !attRecord?.checkoutTime);
+  const isAbsent = !!(selectedDate && !loadingAtt && !attRecord && !isHoliday);
 
-  // Today + still in office → ALLOW (hours will update on checkout)
-  // Today + not checked in → BLOCK
-  // Past + missed checkout (auto) → BLOCK with request option
-  // Past + no checkout yet → BLOCK with request option
-  const isBlocked = !!(isHoliday || isAbsent || isMissedCheckout || isPastNoCheckout || (isToday && !attRecord && !isHoliday)) && !(isToday && isStillInOffice);
+  // Block logic
+  const isBlocked = !!(isHoliday || isAbsent || isMissedCheckout || isPastNoCheckout || (isToday && !attRecord && !isHoliday)) && !isStillInOffice;
 
-  let blockReason = '';
-  let blockType: 'holiday' | 'absent' | 'missed' | 'notcheckedin' | '' = '';
-  if (isHoliday) { blockReason = `This date is a holiday (${isHoliday}). Cannot log time on holidays.`; blockType = 'holiday'; }
-  else if (isToday && !attRecord) { blockReason = 'You have not checked in today. Please check in first before logging time.'; blockType = 'notcheckedin'; }
-  else if (isToday && isStillInOffice) { /* NOT blocked — allow with message */ }
-  else if (isMissedCheckout || isPastNoCheckout) { blockReason = 'You have a missed checkout on this date. Request a checkout correction from your Team Lead.'; blockType = 'missed'; }
-  else if (isAbsent) { blockReason = 'You were absent on this date. Cannot log time without attendance.'; blockType = 'absent'; }
+  // Determine block message
+  let blockMsg = '';
+  let blockType: 'warning' | 'error' | 'info' = 'error';
+  if (isHoliday === 'Weekend') {
+    blockMsg = `This is a weekend (${sel?.format('dddd')}). Cannot log time on weekends.`;
+    blockType = 'info';
+  } else if (isHoliday) {
+    blockMsg = `Public holiday: "${isHoliday}". Cannot log time on holidays.`;
+    blockType = 'info';
+  } else if (isToday && !attRecord && !loadingAtt) {
+    blockMsg = 'You have not checked in today. Please mark your attendance first.';
+  } else if (isMissedCheckout) {
+    blockMsg = 'Missed checkout on this date. Your checkout was auto-closed. Submit an Attendance Request to correct your checkout time, then your hours will be available.';
+    blockType = 'warning';
+  } else if (isPastNoCheckout) {
+    blockMsg = 'No checkout on this date. Submit an Attendance Request to fix it first.';
+    blockType = 'warning';
+  } else if (isAbsent) {
+    blockMsg = `You were absent on ${sel?.format('DD MMM YYYY (dddd)')}. No attendance record found.`;
+  }
 
-  // Calculate worked hours from attendance
+  // Calculate hours strictly from attendance
   let workedHours = 0;
-  let attInfo = '';
+  let attSummary = '';
+  let hoursDisplay = '—';
   if (attRecord?.durationSeconds) {
-    workedHours = Math.round(Number(attRecord.durationSeconds) / 1800) * 0.5; // Round to nearest 0.5
-    if (workedHours > 12) workedHours = 8; // Cap suspicious
-    if (workedHours < 0.5) workedHours = 0;
-    const h = Math.floor(Number(attRecord.durationSeconds) / 3600);
-    const m = Math.floor((Number(attRecord.durationSeconds) % 3600) / 60);
-    attInfo = `${attRecord.checkinTime?.slice(0, 5)} → ${attRecord.checkoutTime?.slice(0, 5) || 'still in'} (${h}h ${m}m)`;
-  } else if (attRecord?.checkinTime) {
-    attInfo = `Checked in at ${attRecord.checkinTime?.slice(0, 5)} — no checkout yet`;
+    const totalSec = Number(attRecord.durationSeconds);
+    workedHours = Math.round(totalSec / 1800) * 0.5;
+    if (workedHours > 12) workedHours = 12;
+    if (workedHours < 0.5) workedHours = 0.5;
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    hoursDisplay = m > 0 ? `${h}h ${m}m` : `${h}h`;
+    attSummary = `${attRecord.checkinTime?.slice(0, 5)} → ${attRecord.checkoutTime?.slice(0, 5)} (${h}h ${m}m worked)`;
+  } else if (isStillInOffice) {
+    const checkinStr = attRecord.checkinTime?.slice(0, 5);
+    const nowH = dayjs().hour();
+    const nowM = dayjs().minute();
+    const [ciH, ciM] = (checkinStr || '0:0').split(':').map(Number);
+    const diffMin = (nowH * 60 + nowM) - (ciH * 60 + ciM);
+    workedHours = Math.round(Math.max(diffMin, 0) / 30) * 0.5;
+    if (workedHours < 0.5) workedHours = 0.5;
+    const sh = Math.floor(diffMin / 60);
+    const sm = diffMin % 60;
+    hoursDisplay = sm > 0 ? `${sh}h ${sm}m` : `${sh}h`;
+    attSummary = `Checked in at ${checkinStr} — still working (${sh}h ${sm}m so far)`;
   }
 
-  const handleDateChange = (date: any) => {
-    if (date) {
-      const dateStr = date.format('YYYY-MM-DD');
-      setSelectedDate(dateStr);
-      // Auto-fill hours after a short delay (data needs to load)
-      setTimeout(() => {
-        if (workedHours > 0) {
-          form.setFieldsValue({ hours: workedHours });
-        }
-      }, 500);
-    } else {
-      setSelectedDate(null);
+  // Auto-set hours when attendance loads
+  useEffect(() => {
+    if (workedHours > 0) {
+      form.setFieldsValue({ hours: workedHours });
     }
-  };
-
-  // Auto-fill hours when attendance data arrives
-  const prevWorkedRef = useState(0);
-  if (workedHours > 0 && workedHours !== prevWorkedRef[0]) {
-    prevWorkedRef[1](workedHours);
-    form.setFieldsValue({ hours: workedHours });
-  }
-  // For today (still in office), set 8h as default
-  const isToday2 = selectedDate === dayjs().format('YYYY-MM-DD');
-  const isStillInOffice2 = attRecord?.checkinTime && !attRecord?.checkoutTime && !attRecord?.checkoutState;
-  if (isToday2 && isStillInOffice2 && !form.getFieldValue('hours')) {
-    form.setFieldsValue({ hours: 8 });
-  }
+  }, [workedHours, selectedDate]);
 
   const mutation = useMutation({
     mutationFn: createTimeEntry,
     onSuccess: () => {
-      message.success('Time entry saved successfully!');
+      message.success('Time entry saved!');
       form.resetFields();
       setProgramId(undefined);
       setProjectId(undefined);
-      setDescLength(0);
       setSelectedDate(null);
       qc.invalidateQueries({ queryKey: ['timesheetGrouped'] });
     },
-    onError: () => message.error('Failed to save entry'),
+    onError: () => message.error('Failed to save'),
   });
 
   const onFinish = (values: any) => {
-    if (isBlocked) {
-      message.error(blockReason);
-      return;
-    }
+    if (isBlocked) { message.error(blockMsg); return; }
+    if (!selectedDate) { message.error('Select a date'); return; }
     mutation.mutate({
       ...values,
       userId: user?.id,
       teamId: user?.teamId,
-      entryDate: values.entryDate.format('YYYY-MM-DD'),
+      entryDate: selectedDate,
+      hours: workedHours, // Always use calculated hours, not user input
     });
   };
 
-  const L = (text: string, required = false) => (
-    <span style={{ fontWeight: 600, color: '#1C2833' }}>
-      {text}{required && <span style={{ color: '#e74c3c' }}>*</span>}
-    </span>
-  );
-
   return (
-    <div>
-      <div className="page-heading">Data Entry</div>
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div className="page-heading"><FileTextOutlined style={{ marginRight: 8 }} />Log Work</div>
 
-      {/* Still in office today — info banner */}
-      {selectedDate && isToday && isStillInOffice && (
-        <div style={{
-          padding: '12px 18px', borderRadius: 8, marginBottom: 16,
-          background: '#f6ffed', border: '1px solid #b7eb8f',
-          display: 'flex', alignItems: 'center', gap: 10,
-        }}>
-          <span style={{ fontSize: 18, color: '#52c41a' }}>●</span>
-          <div>
-            <div style={{ fontWeight: 600, color: '#1C2833', fontSize: 14 }}>You're currently in the office (checked in at {attRecord?.checkinTime?.slice(0, 5)})</div>
-            <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
-              Hours will be automatically calculated when you check out. You can submit now and the hours will reflect your full day.
+      {/* Date + Attendance Status */}
+      <Card size="small" style={{ borderRadius: 12, marginBottom: 16, border: `2px solid var(--brand-primary, #154360)` }}>
+        <Row gutter={16} align="middle">
+          <Col xs={24} sm={8}>
+            <div style={{ fontWeight: 600, color: 'var(--brand-primary, #154360)', marginBottom: 4, fontSize: 13 }}>
+              <CalendarOutlined style={{ marginRight: 6 }} />Select Date
             </div>
-          </div>
-        </div>
-      )}
+            <DatePicker style={{ width: '100%' }} format="DD MMM YYYY (ddd)"
+              value={selectedDate ? dayjs(selectedDate) : null}
+              onChange={(d) => setSelectedDate(d ? d.format('YYYY-MM-DD') : null)}
+              disabledDate={(c) => c && c.isAfter(dayjs(), 'day')} />
+          </Col>
+          <Col xs={24} sm={10}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#666', marginBottom: 4 }}>
+              <ClockCircleOutlined style={{ marginRight: 6 }} />Attendance
+            </div>
+            {!selectedDate ? (
+              <span style={{ color: '#bfbfbf', fontSize: 13 }}>Pick a date to see attendance</span>
+            ) : loadingAtt ? (
+              <span style={{ color: '#bfbfbf', fontSize: 13 }}>Checking attendance...</span>
+            ) : isBlocked ? (
+              <span style={{ color: '#ff4d4f', fontSize: 12, fontWeight: 500 }}>{blockMsg.split('.')[0]}</span>
+            ) : isStillInOffice ? (
+              <Tag color="green" icon={<CheckCircleOutlined />} style={{ fontSize: 12 }}>{attSummary}</Tag>
+            ) : attSummary ? (
+              <Tag color="blue" style={{ fontSize: 12 }}>{attSummary}</Tag>
+            ) : null}
+          </Col>
+          <Col xs={24} sm={6} style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#666', marginBottom: 4 }}>Hours</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: isBlocked ? '#ff4d4f' : 'var(--brand-primary, #154360)' }}>
+              {isBlocked || !selectedDate ? '—' : hoursDisplay}
+            </div>
+            {selectedDate && !isBlocked && workedHours > 0 && (
+              <div style={{ fontSize: 11, color: '#8c8c8c' }}>From attendance (read-only)</div>
+            )}
+          </Col>
+        </Row>
+      </Card>
 
-      {/* Block banner */}
+      {/* Block alert with action link */}
       {selectedDate && isBlocked && (
-        <div style={{
-          padding: '12px 18px', borderRadius: 8, marginBottom: 16,
-          background: blockType === 'holiday' ? '#f0f7ff' : blockType === 'absent' || blockType === 'notcheckedin' ? '#fff2f0' : '#fff7e6',
-          border: `1px solid ${blockType === 'holiday' ? '#91caff' : blockType === 'absent' || blockType === 'notcheckedin' ? '#ffccc7' : '#ffe58f'}`,
-          display: 'flex', alignItems: 'flex-start', gap: 10,
-        }}>
-          <span style={{ fontSize: 20, marginTop: 2 }}>
-            {blockType === 'holiday' ? '📅' : blockType === 'notcheckedin' ? '🔴' : blockType === 'absent' ? '🚫' : '⚠️'}
-          </span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, color: '#1C2833', fontSize: 14 }}>{blockReason}</div>
-            {blockType === 'missed' && (
-              <div style={{ marginTop: 8 }}>
-                <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
-                  Your checkout was auto-closed. Request a correction so your Team Lead can fix it.
-                </div>
-                <a href="/my/attendance-requests" style={{
-                  display: 'inline-block', padding: '6px 16px', borderRadius: 6,
-                  background: '#154360', color: '#fff', fontSize: 13, fontWeight: 500,
-                  textDecoration: 'none',
-                }}>
-                  Request Checkout Correction →
-                </a>
-              </div>
-            )}
-            {blockType === 'absent' && (
-              <div style={{ marginTop: 8 }}>
-                <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
-                  If you were present but forgot to mark attendance, request a correction.
-                </div>
-                <a href="/my/attendance-requests" style={{
-                  display: 'inline-block', padding: '6px 16px', borderRadius: 6,
-                  background: '#154360', color: '#fff', fontSize: 13, fontWeight: 500,
-                  textDecoration: 'none',
-                }}>
-                  Request Attendance Correction →
-                </a>
-              </div>
-            )}
-            {blockType === 'notcheckedin' && (
-              <div style={{ marginTop: 8 }}>
-                <a href="/my/check-in-out" style={{
-                  display: 'inline-block', padding: '6px 16px', borderRadius: 6,
-                  background: '#52c41a', color: '#fff', fontSize: 13, fontWeight: 500,
-                  textDecoration: 'none',
-                }}>
-                  Go to Check In →
-                </a>
-              </div>
-            )}
-          </div>
-        </div>
+        <Alert type={blockType} showIcon message={blockMsg} style={{ marginBottom: 16, borderRadius: 8 }}
+          description={
+            (isMissedCheckout || isPastNoCheckout || isAbsent) ? (
+              <a href="/my/attendance-requests" style={{ fontWeight: 600 }}>Go to Attendance Requests to fix this →</a>
+            ) : isToday && !attRecord ? (
+              <a href="/my/check-in-out" style={{ fontWeight: 600 }}>Go to Check In →</a>
+            ) : null
+          } />
       )}
 
-      <Form form={form} onFinish={onFinish} layout="vertical" className="clean-form" initialValues={{ workType: 1 }}>
-        <div className="form-grid">
+      {/* Main form */}
+      <Form form={form} onFinish={onFinish} layout="vertical" className="clean-form" initialValues={{ workType: 1 }}
+        style={{ opacity: isBlocked ? 0.4 : 1, pointerEvents: isBlocked ? 'none' : 'auto' }}>
 
-          {/* Row 1 */}
-          <Form.Item name="workType" label={L('Work Type:')}>
-            <Select options={[{ label: 'Billable', value: 1 }, { label: 'Not Billable', value: 0 }]} />
-          </Form.Item>
-          <Form.Item name="programId" label={L('Program Name:', true)} rules={[{ required: true, message: 'Required' }]}>
-            <Select placeholder="-- Choose --" showSearch optionFilterProp="label"
-              options={(programs || []).map((p: any) => ({ label: p.programName, value: p.id }))}
-              onChange={(v) => { setProgramId(v); setProjectId(undefined); form.setFieldsValue({ projectId: undefined, subProjectId: undefined }); }} />
-          </Form.Item>
-
-          {/* Row 2 */}
-          <Form.Item name="productPhase" label={L('Product Phase:', true)} rules={[{ required: true, message: 'Required' }]}>
-            <Select placeholder="-- Choose --"
-              options={[{ label: 'RnD / Prototyping', value: 'rnd' }, { label: 'Production', value: 'production' }]} />
-          </Form.Item>
-          <Form.Item name="projectId" label={L('Project Name:', true)} rules={[{ required: true, message: 'Required' }]}>
-            <Select placeholder="-- Choose --" showSearch optionFilterProp="label"
-              options={(projects || []).map((p: any) => ({ label: p.projectName, value: p.id }))}
-              onChange={(v) => { setProjectId(v); form.setFieldsValue({ subProjectId: undefined }); }}
-              dropdownRender={(menu) => (
-                <>
-                  {menu}
-                  {programId && (
-                    <div style={{ padding: '6px 10px', borderTop: '1px solid #f0f0f0', display: 'flex', gap: 6 }}>
-                      <Input size="small" placeholder="Add new project..." value={newProjectName}
-                        onChange={e => setNewProjectName(e.target.value)} style={{ flex: 1 }} />
-                      <Button size="small" type="primary" disabled={!newProjectName}
-                        onClick={async () => {
+        <Card size="small" style={{ borderRadius: 12, marginBottom: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--brand-primary, #154360)', marginBottom: 12 }}>
+            <ProjectOutlined style={{ marginRight: 6 }} />Project Details
+          </div>
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item name="programId" label="Program" rules={[{ required: true, message: 'Required' }]}>
+                <Select placeholder="Select program..." showSearch optionFilterProp="label"
+                  options={(programs || []).map((p: any) => ({ label: p.programName, value: p.id }))}
+                  onChange={(v) => { setProgramId(v); setProjectId(undefined); form.setFieldsValue({ projectId: undefined, subProjectId: undefined }); }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="projectId" label="Project" rules={[{ required: true, message: 'Required' }]}>
+                <Select placeholder={programId ? 'Select project...' : 'Select program first'} showSearch optionFilterProp="label" disabled={!programId}
+                  options={(projects || []).map((p: any) => ({ label: p.projectName, value: p.id }))}
+                  onChange={(v) => { setProjectId(v); form.setFieldsValue({ subProjectId: undefined }); }}
+                  dropdownRender={(menu) => (
+                    <>{menu}{programId && (
+                      <div style={{ padding: '6px 10px', borderTop: '1px solid #f0f0f0', display: 'flex', gap: 6 }}>
+                        <Input size="small" placeholder="New project..." value={newProjectName} onChange={e => setNewProjectName(e.target.value)} style={{ flex: 1 }} />
+                        <Button size="small" type="primary" disabled={!newProjectName} onClick={async () => {
                           const p = await quickAddProject({ projectName: newProjectName, programId });
-                          setNewProjectName('');
-                          setProjectId(p.id);
-                          form.setFieldsValue({ projectId: p.id, subProjectId: undefined });
+                          setNewProjectName(''); setProjectId(p.id); form.setFieldsValue({ projectId: p.id, subProjectId: undefined });
                           qc.invalidateQueries({ queryKey: ['projects'] });
-                        }}>Add</Button>
-                    </div>
-                  )}
-                </>
-              )}
-            />
-          </Form.Item>
-
-          {/* Row 3 */}
-          <Form.Item name="subProjectId" label={L('Sub Project Name:', true)} rules={[{ required: true, message: 'Required' }]}>
-            <Select placeholder="-- Choose --" showSearch optionFilterProp="label"
-              options={(subProjects || []).map((p: any) => ({ label: p.subProjectName, value: p.id }))}
-              dropdownRender={(menu) => (
-                <>
-                  {menu}
-                  {projectId && programId && (
-                    <div style={{ padding: '6px 10px', borderTop: '1px solid #f0f0f0', display: 'flex', gap: 6 }}>
-                      <Input size="small" placeholder="Add new sub-project..." value={newSubProjectName}
-                        onChange={e => setNewSubProjectName(e.target.value)} style={{ flex: 1 }} />
-                      <Button size="small" type="primary" disabled={!newSubProjectName}
-                        onClick={async () => {
+                        }}>+</Button>
+                      </div>
+                    )}</>
+                  )} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="subProjectId" label="Sub Project" rules={[{ required: true, message: 'Required' }]}>
+                <Select placeholder={projectId ? 'Select sub-project...' : 'Select project first'} showSearch optionFilterProp="label" disabled={!projectId}
+                  options={(subProjects || []).map((p: any) => ({ label: p.subProjectName, value: p.id }))}
+                  dropdownRender={(menu) => (
+                    <>{menu}{projectId && programId && (
+                      <div style={{ padding: '6px 10px', borderTop: '1px solid #f0f0f0', display: 'flex', gap: 6 }}>
+                        <Input size="small" placeholder="New sub-project..." value={newSubProjectName} onChange={e => setNewSubProjectName(e.target.value)} style={{ flex: 1 }} />
+                        <Button size="small" type="primary" disabled={!newSubProjectName} onClick={async () => {
                           const sp = await quickAddSubProject({ subProjectName: newSubProjectName, programId, projectId });
-                          setNewSubProjectName('');
-                          form.setFieldsValue({ subProjectId: sp.id });
-                          qc.invalidateQueries({ queryKey: ['subProjects'] });
-                        }}>Add</Button>
-                    </div>
-                  )}
-                </>
-              )}
-            />
-          </Form.Item>
-          <Form.Item name="entryDate" label={L('Date:', true)} rules={[{ required: true, message: 'Required' }]}>
-            <DatePicker style={{ width: '100%' }} format="DD MMMM, YYYY - (dddd)" onChange={handleDateChange}
-              disabledDate={(current) => current && current.isAfter(dayjs(), 'day')} />
-          </Form.Item>
+                          setNewSubProjectName(''); form.setFieldsValue({ subProjectId: sp.id }); qc.invalidateQueries({ queryKey: ['subProjects'] });
+                        }}>+</Button>
+                      </div>
+                    )}</>
+                  )} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="wbsId" label="WBS" rules={[{ required: true, message: 'Required' }]}>
+                <Select placeholder="Select WBS..." showSearch optionFilterProp="label"
+                  options={(wbsList || []).map((w: any) => ({ label: w.description, value: w.id }))} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item name="workType" label="Work Type">
+                <Select options={[{ label: 'Billable', value: 1 }, { label: 'Not Billable', value: 0 }]} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="productPhase" label="Phase" rules={[{ required: true, message: 'Required' }]}>
+                <Select placeholder="Select phase..." options={[{ label: 'RnD / Prototyping', value: 'rnd' }, { label: 'Production', value: 'production' }]} />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Card>
 
-          {/* Full width: Description */}
-          <div className="full-width">
-            <Form.Item name="description" rules={[{ required: true, message: 'Required' }]}
-              label={
-                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                  <span style={{ fontWeight: 600, color: '#1C2833' }}>
-                    Description:<span style={{ color: '#e74c3c' }}>*</span>
-                  </span>
-                  <span style={{ fontSize: 13, color: '#888', fontWeight: 400 }}>{descLength}/500</span>
-                </div>
-              }
-              labelCol={{ style: { width: '100%' } }}>
-              <Input.TextArea rows={4} maxLength={500} placeholder="Aa"
-                onChange={(e) => setDescLength(e.target.value.length)}
-                style={{ resize: 'none' }} />
-            </Form.Item>
-          </div>
-
-          {/* Row 4 */}
-          <Form.Item name="wbsId" label={L('WBS:', true)} rules={[{ required: true, message: 'Required' }]}>
-            <Select placeholder="-- Choose --" showSearch optionFilterProp="label"
-              options={(wbsList || []).map((w: any) => ({ label: w.description, value: w.id }))} />
+        <Card size="small" style={{ borderRadius: 12, marginBottom: 16 }}>
+          <Form.Item name="description" label={<span style={{ fontWeight: 600, color: 'var(--brand-primary, #154360)' }}>What did you work on?</span>}
+            rules={[{ required: true, message: 'Describe what you did' }]}>
+            <Input.TextArea rows={3} maxLength={500} showCount placeholder="Describe your tasks, deliverables..." style={{ resize: 'none' }} />
           </Form.Item>
-          <div>
-            <Form.Item name="hours" label={L('Hours:', true)} rules={[{ required: true, message: 'Required' }]}>
-              <Input readOnly style={{ background: '#f5f5f5', fontWeight: 700, fontSize: 16, cursor: 'not-allowed' }}
-                suffix={<span style={{ color: '#8c8c8c', fontSize: 12 }}>from attendance</span>}
-                placeholder={!selectedDate ? 'Select a date first' : isToday && isStillInOffice ? 'Will update on checkout' : 'No attendance data'} />
-            </Form.Item>
-            {selectedDate && !isBlocked && attInfo && (
-              <div style={{ marginTop: -8, fontSize: 12, color: '#52c41a' }}>
-                <ClockCircleOutlined style={{ marginRight: 4 }} />
-                {attInfo}
-              </div>
-            )}
-            {selectedDate && !isBlocked && !attInfo && !isToday && (
-              <div style={{ marginTop: -8, fontSize: 12, color: '#fa8c16' }}>
-                No attendance found — hours cannot be determined
-              </div>
-            )}
-            {isToday && isStillInOffice && (
-              <div style={{ marginTop: -8, fontSize: 12, color: '#52c41a' }}>
-                Currently in office — hours will auto-calculate on checkout
-              </div>
-            )}
-          </div>
-        </div>
+        </Card>
 
-        <div style={{ textAlign: 'center', marginTop: 32 }}>
-          <Button type="primary" htmlType="submit" loading={mutation.isPending} disabled={isBlocked} className="submit-btn"
-            style={isBlocked ? { opacity: 0.4, cursor: 'not-allowed' } : {}}>
-            Submit
+        <div style={{ textAlign: 'center' }}>
+          <Button type="primary" htmlType="submit" loading={mutation.isPending} disabled={isBlocked || !selectedDate || workedHours === 0}
+            size="large" style={{ borderRadius: 24, padding: '0 48px', height: 44, fontWeight: 600, fontSize: 15 }}>
+            Submit Entry
           </Button>
         </div>
       </Form>

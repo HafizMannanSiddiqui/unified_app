@@ -6,12 +6,16 @@ import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import apiClient from '../../api/client';
 import { getUsers } from '../../api/users';
+import { useAuthStore } from '../../store/authStore';
 
 const { RangePicker } = DatePicker;
+const ADMIN_ROLES = ['super admin', 'Admin', 'Application Manager'];
 const getPersonDetail = (userId: number, from: string, to: string) =>
   apiClient.get('/attendance/person-detail', { params: { userId, from, to } }).then(r => r.data);
 const markWfh = (userId: number, date: string) =>
   apiClient.post('/attendance/mark-wfh', { userId, date }).then(r => r.data);
+const getMyReportees = (managerId: number) =>
+  apiClient.get('/users/my-team-members', { params: { managerId } }).then(r => r.data);
 
 export default function PersonDetail() {
   const now = dayjs();
@@ -35,7 +39,18 @@ export default function PersonDetail() {
   const [wfhModal, setWfhModal] = useState(false);
   const [wfhForm] = Form.useForm();
 
-  const { data: users } = useQuery({ queryKey: ['usersAll'], queryFn: () => getUsers(1, 1000) });
+  const currentUser = useAuthStore((s) => s.user);
+  const isAdmin = currentUser?.roles?.some((r: any) => ADMIN_ROLES.includes(r.name));
+  // Admins see all users; leads see only reportees
+  const { data: users } = useQuery({
+    queryKey: ['personDetailUsers', isAdmin ? 'all' : currentUser?.id],
+    queryFn: async () => {
+      if (isAdmin) return getUsers(1, 1000);
+      const reportees = await getMyReportees(currentUser!.id);
+      return { items: reportees.map((r: any) => ({ id: r.id, displayName: r.displayName, username: r.username })) };
+    },
+    enabled: !!currentUser?.id,
+  });
 
   // Extra info when person selected
   const { data: allEmails } = useQuery({

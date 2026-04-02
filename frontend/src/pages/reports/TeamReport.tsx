@@ -1,21 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
-import { Select, DatePicker, Button, Spin } from 'antd';
+import { Select, DatePicker, Button, Spin, Tag } from 'antd';
 import { useState } from 'react';
 import dayjs from 'dayjs';
 import { getTeamReport } from '../../api/gtl';
 import { getTeams } from '../../api/teams';
+import { useAuthStore } from '../../store/authStore';
 
 const { RangePicker } = DatePicker;
+const ADMIN_ROLES = ['super admin', 'Admin', 'Application Manager'];
 
 export default function TeamReport() {
   const now = dayjs();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.roles?.some((r: any) => ADMIN_ROLES.includes(r.name));
   const [range, setRange] = useState<[string, string]>([now.startOf('month').format('YYYY-MM-DD'), now.format('YYYY-MM-DD')]);
   const [teamId, setTeamId] = useState<number | undefined>();
   const [submitted, setSubmitted] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['teamReport', range, teamId],
-    queryFn: () => getTeamReport(range[0], range[1], teamId),
+    queryKey: ['teamReport', range, teamId, isAdmin ? 'admin' : user?.id],
+    queryFn: () => getTeamReport(range[0], range[1], isAdmin ? teamId : undefined, isAdmin ? undefined : user?.id),
     enabled: submitted,
   });
 

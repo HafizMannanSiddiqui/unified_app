@@ -1,0 +1,49 @@
+graph TD
+    style A fill:#154360,color:#fff,stroke:none,font-weight:bold
+    style B fill:#1a5276,color:#fff,stroke:none
+    style C fill:#1a5276,color:#fff,stroke:none
+    style D fill:#1a5276,color:#fff,stroke:none
+    style E fill:#1a5276,color:#fff,stroke:none
+    style F fill:#1a5276,color:#fff,stroke:none
+    style G fill:#1a5276,color:#fff,stroke:none
+
+    A["frontend/src/"]
+
+    A --> B["components/"]
+    B --> B1["layout/"]
+    B1 --> B1a["AppLayout.tsx"]
+    B1 --> B1b["Header.tsx"]
+    B1 --> B1c["Sidebar.tsx"]
+    B --> B2["common/"]
+    B2 --> B2a["ProtectedRoute.tsx"]
+
+    A --> C["pages/"]
+    C --> C1["auth/ - Login, ForgotPassword"]
+    C --> C2["gtl/ - DataEntry, TimeEntryList, Approvals"]
+    C --> C3["attendance/ - MyAttendance, CheckInOut,\nWfhManagement, WeekendAssignments,\nHolidays, MyTeam, DailyReport,\nEmployeesReport, PublicBoard, Kiosk"]
+    C --> C4["leaves/ - MyLeaves, ApplyLeave, PendingLeaves"]
+    C --> C5["profiles/ - MyProfile, EmployeeList,\nContactDirectory, BloodGroup"]
+    C --> C6["reports/ - LeadInsights, PersonDetail,\nTeamReport, GeneralReport, GhostEmployees"]
+    C --> C7["manage/ - Teams, Programs, Projects,\nSubProjects, EmployeeManagement,\nTeamChangeRequests, DeviceManagement"]
+    C --> C8["users/ - UserList"]
+    C --> C9["resource/ - ResourceAllocation, ProjectAllocation"]
+    C --> C10["dashboard/ - Dashboard"]
+    C --> C11["help/ - UserGuide"]
+    C --> C12["settings/ - ResetPassword"]
+
+    A --> D["api/"]
+    D --> D1["client.ts - Axios instance + JWT interceptor"]
+    D --> D2["gtl.ts - Time entries, approvals, reports"]
+    D --> D3["attendance.ts - Checkin, attendance, WFH"]
+    D --> D4["leaves.ts - CRUD + balance"]
+    D --> D5["users.ts - User CRUD + directory"]
+    D --> D6["teams.ts - Team CRUD"]
+
+    A --> E["store/"]
+    E --> E1["authStore.ts - Zustand + persist"]
+
+    A --> F["theme/"]
+    F --> F1["companyThemes.ts - Ant Design + CSS vars"]
+
+    A --> G["hooks/"]
+    G --> G1["useAuth.ts"]

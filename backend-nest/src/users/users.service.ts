@@ -27,33 +27,65 @@ export class UsersService {
     return { teams, managers };
   }
 
+  // Helper: log change to employee_history
+  private async logHistory(userId: number, fieldName: string, oldValue: string, newValue: string, changedBy: number) {
+    await this.prisma.$executeRaw`
+      INSERT INTO employee_history (user_id, field_name, old_value, new_value, changed_by, effective_date, created_at)
+      VALUES (${userId}, ${fieldName}, ${oldValue}, ${newValue}, ${changedBy}, CURRENT_DATE, NOW())`;
+  }
+
   // Add team membership
-  async addTeamMembership(userId: number, teamId: number, roleInTeam?: string, isPrimary = false) {
+  async addTeamMembership(userId: number, teamId: number, roleInTeam?: string, isPrimary = false, changedBy?: number) {
     await this.prisma.$executeRaw`
       INSERT INTO user_team_memberships (user_id, team_id, role_in_team, is_primary, created_at)
       VALUES (${userId}, ${teamId}, ${roleInTeam || null}, ${isPrimary}, NOW())
       ON CONFLICT (user_id, team_id) DO UPDATE SET role_in_team = ${roleInTeam || null}, is_primary = ${isPrimary}`;
+    if (changedBy) {
+      const team = await this.prisma.team.findUnique({ where: { id: teamId }, include: { parent: true } });
+      const teamLabel = team?.parent ? `${team.parent.teamName} → ${team.teamName}` : team?.teamName || '';
+      await this.logHistory(userId, 'team_added', '', teamLabel, changedBy);
+    }
     return { success: true };
   }
 
   // Remove team membership
-  async removeTeamMembership(id: number) {
+  async removeTeamMembership(id: number, changedBy?: number) {
+    const membership = await this.prisma.$queryRaw<any[]>`
+      SELECT utm.user_id, t.team_name, pt.team_name as parent_name
+      FROM user_team_memberships utm
+      JOIN teams t ON t.id = utm.team_id
+      LEFT JOIN teams pt ON pt.id = t.parent_id
+      WHERE utm.id = ${id}`;
     await this.prisma.$executeRaw`DELETE FROM user_team_memberships WHERE id = ${id}`;
+    if (changedBy && membership[0]) {
+      const label = membership[0].parent_name ? `${membership[0].parent_name} → ${membership[0].team_name}` : membership[0].team_name;
+      await this.logHistory(membership[0].user_id, 'team_removed', label, '', changedBy);
+    }
     return { success: true };
   }
 
   // Add manager
-  async addManager(userId: number, managerId: number, isPrimary = false) {
+  async addManager(userId: number, managerId: number, isPrimary = false, changedBy?: number) {
     await this.prisma.$executeRaw`
       INSERT INTO user_managers (user_id, manager_id, is_primary, created_at)
       VALUES (${userId}, ${managerId}, ${isPrimary}, NOW())
       ON CONFLICT (user_id, manager_id) DO UPDATE SET is_primary = ${isPrimary}`;
+    if (changedBy) {
+      const mgr = await this.prisma.user.findUnique({ where: { id: managerId }, select: { displayName: true } });
+      await this.logHistory(userId, 'manager_added', '', mgr?.displayName || '', changedBy);
+    }
     return { success: true };
   }
 
   // Remove manager
-  async removeManager(id: number) {
+  async removeManager(id: number, changedBy?: number) {
+    const rel = await this.prisma.$queryRaw<any[]>`
+      SELECT um.user_id, u.display_name as manager_name
+      FROM user_managers um JOIN users u ON u.id = um.manager_id WHERE um.id = ${id}`;
     await this.prisma.$executeRaw`DELETE FROM user_managers WHERE id = ${id}`;
+    if (changedBy && rel[0]) {
+      await this.logHistory(rel[0].user_id, 'manager_removed', rel[0].manager_name, '', changedBy);
+    }
     return { success: true };
   }
 
@@ -87,6 +119,7 @@ export class UsersService {
         team: { select: { teamName: true } },
         designation: { select: { name: true } },
         profile: { select: { contactNo: true, bloodGroup: true, picturePath: true, personalEmail: true } },
+        deviceUser: { select: { cardNo: true, uid: true } },
       },
       orderBy: { displayName: 'asc' },
     });
@@ -163,15 +196,23 @@ export class UsersService {
 
     if (!isSuperAdmin) {
       // Team Lead restrictions:
-      // 1. Can only edit members of their own team
-      const changer = await this.prisma.user.findUnique({ where: { id: changedBy }, select: { teamId: true } });
-      const target = await this.prisma.user.findUnique({ where: { id: userId }, select: { teamId: true } });
-      if (changer?.teamId !== target?.teamId) {
-        return { error: 'You can only edit members of your own team' };
+      // 1. Can only edit their reportees (via user_managers)
+      const isReportee = await this.prisma.$queryRaw<any[]>`
+        SELECT 1 FROM user_managers WHERE user_id = ${userId} AND manager_id = ${changedBy} LIMIT 1`;
+      if (isReportee.length === 0) {
+        return { error: 'You can only edit employees who report to you' };
       }
-      // 2. Can only change designation — NOT team or manager
-      if (fieldName === 'team') return { error: 'Only super admin can change team assignments' };
-      if (fieldName === 'reportTo') return { error: 'Only super admin can change reporting structure' };
+      // 2. Can only change designation — team/manager changes go through request workflow
+      if (fieldName === 'team' || fieldName === 'reportTo') {
+        return this.submitTeamChangeRequest({
+          requestType: fieldName === 'team' ? 'add_to_team' : 'add_manager',
+          targetUserId: userId,
+          requestedBy: changedBy,
+          teamName: fieldName === 'team' ? newValue : undefined,
+          managerName: fieldName === 'reportTo' ? newValue : undefined,
+          reason: `Lead requested ${fieldName} change to "${newValue}"`,
+        });
+      }
     }
     let oldValue = '';
 
@@ -181,6 +222,8 @@ export class UsersService {
       let desig = await this.prisma.designation.findFirst({ where: { name: newValue } });
       if (!desig) desig = await this.prisma.designation.create({ data: { name: newValue } });
       await this.prisma.user.update({ where: { id: userId }, data: { designationId: desig.id } });
+      // Sync jobTitle in profile to match designation
+      await this.prisma.$executeRaw`UPDATE profiles SET job_title = ${newValue}, updated_at = NOW() WHERE user_id = ${userId}`;
       await this.prisma.$executeRaw`
         UPDATE user_team_memberships SET role_in_team = ${newValue} WHERE user_id = ${userId} AND is_primary = true`;
     } else if (fieldName === 'team') {
@@ -338,6 +381,10 @@ export class UsersService {
     return this.prisma.setting.findMany({ orderBy: { name: 'asc' } });
   }
 
+  async createDevice(data: { name: string; displayName: string; description?: string; value: any }) {
+    return this.prisma.setting.create({ data: { ...data, isActive: true } });
+  }
+
   async updateDevice(id: number, data: { displayName?: string; description?: string; value?: any; isActive?: boolean }) {
     return this.prisma.setting.update({ where: { id }, data });
   }
@@ -382,7 +429,11 @@ export class UsersService {
     const [items, total] = await Promise.all([
       this.prisma.user.findMany({
         where,
-        include: { team: true, designation: true, roles: { include: { role: true } } },
+        include: {
+          team: true, designation: true, roles: { include: { role: true } },
+          profile: { select: { contactNo: true, cnic: true, bloodGroup: true, dateOfJoining: true } },
+          deviceUser: { select: { cardNo: true, uid: true } },
+        },
         orderBy: { displayName: 'asc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -422,8 +473,27 @@ export class UsersService {
     email?: string; displayName?: string; firstName?: string; lastName?: string;
     teamId?: number; designationId?: number; reportTo?: number;
     payrollCompany?: string; isActive?: boolean; roleIds?: number[];
-  }) {
+  }, changedBy?: number) {
     const { roleIds, ...rest } = data;
+
+    // Track role changes
+    if (roleIds !== undefined && changedBy) {
+      const oldRoles = await this.prisma.userHasRole.findMany({ where: { userId: id }, include: { role: true } });
+      const oldNames = oldRoles.map(r => r.role.name).sort().join(', ');
+      const newNames = (await this.prisma.role.findMany({ where: { id: { in: roleIds } } })).map(r => r.name).sort().join(', ');
+      if (oldNames !== newNames) {
+        await this.logHistory(id, 'roles', oldNames, newNames, changedBy);
+      }
+    }
+
+    // Track status changes
+    if (data.isActive !== undefined && changedBy) {
+      const current = await this.prisma.user.findUnique({ where: { id }, select: { isActive: true } });
+      if (current && current.isActive !== data.isActive) {
+        await this.logHistory(id, 'status', current.isActive ? 'Active' : 'Inactive', data.isActive ? 'Active' : 'Inactive', changedBy);
+      }
+    }
+
     await this.prisma.user.update({ where: { id }, data: rest });
     if (roleIds !== undefined) {
       await this.prisma.userHasRole.deleteMany({ where: { userId: id } });
@@ -434,5 +504,119 @@ export class UsersService {
       }
     }
     return this.findOne(id);
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // TEAM CHANGE REQUESTS — Lead requests, Admin approves/rejects
+  // ══════════════════════════════════════════════════════════════
+
+  async submitTeamChangeRequest(data: {
+    requestType: string; targetUserId: number; requestedBy: number;
+    teamName?: string; managerName?: string; reason?: string;
+  }) {
+    let teamId: number | null = null;
+    let managerId: number | null = null;
+
+    if (data.teamName) {
+      const team = await this.prisma.team.findFirst({ where: { teamName: { contains: data.teamName, mode: 'insensitive' } } });
+      teamId = team?.id || null;
+    }
+    if (data.managerName) {
+      const manager = await this.prisma.user.findFirst({
+        where: { OR: [{ displayName: { contains: data.managerName, mode: 'insensitive' } }, { username: data.managerName }] },
+      });
+      managerId = manager?.id || null;
+    }
+
+    await this.prisma.$executeRaw`
+      INSERT INTO team_change_requests (request_type, target_user_id, requested_by, team_id, manager_id, reason, status, created_at)
+      VALUES (${data.requestType}, ${data.targetUserId}, ${data.requestedBy}, ${teamId}, ${managerId}, ${data.reason || null}, 0, NOW())`;
+
+    return { requestCreated: true, message: 'Your request has been submitted for admin approval' };
+  }
+
+  async getTeamChangeRequests(status?: number) {
+    const statusFilter = status !== undefined ? `AND tcr.status = ${status}` : '';
+    return this.prisma.$queryRawUnsafe<any[]>(`
+      SELECT tcr.*,
+             tu.display_name as "targetName", tu.username as "targetUsername",
+             ru.display_name as "requesterName", ru.username as "requesterUsername",
+             t.team_name as "teamName",
+             mu.display_name as "managerName",
+             rev.display_name as "reviewerName"
+      FROM team_change_requests tcr
+      JOIN users tu ON tu.id = tcr.target_user_id
+      JOIN users ru ON ru.id = tcr.requested_by
+      LEFT JOIN teams t ON t.id = tcr.team_id
+      LEFT JOIN users mu ON mu.id = tcr.manager_id
+      LEFT JOIN users rev ON rev.id = tcr.reviewed_by
+      WHERE 1=1 ${statusFilter}
+      ORDER BY tcr.created_at DESC`);
+  }
+
+  async approveTeamChangeRequest(id: number, reviewerId: number) {
+    const reqs = await this.prisma.$queryRaw<any[]>`
+      SELECT * FROM team_change_requests WHERE id = ${id} AND status = 0`;
+    if (reqs.length === 0) return { error: 'Request not found or already processed' };
+    const r = reqs[0];
+
+    // Apply the change
+    if (r.request_type === 'add_to_team' && r.team_id) {
+      await this.addTeamMembership(r.target_user_id, r.team_id);
+      // Also update primary team FK
+      await this.prisma.user.update({ where: { id: r.target_user_id }, data: { teamId: r.team_id } });
+      // Log history
+      const team = await this.prisma.team.findUnique({ where: { id: r.team_id } });
+      await this.prisma.$executeRaw`
+        INSERT INTO employee_history (user_id, field_name, old_value, new_value, changed_by, effective_date, created_at)
+        VALUES (${r.target_user_id}, 'team', '', ${team?.teamName || ''}, ${reviewerId}, CURRENT_DATE, NOW())`;
+    } else if (r.request_type === 'remove_from_team' && r.team_id) {
+      await this.prisma.$executeRaw`
+        DELETE FROM user_team_memberships WHERE user_id = ${r.target_user_id} AND team_id = ${r.team_id}`;
+    } else if (r.request_type === 'add_manager' && r.manager_id) {
+      await this.addManager(r.target_user_id, r.manager_id);
+      await this.prisma.user.update({ where: { id: r.target_user_id }, data: { reportTo: r.manager_id } });
+      const mgr = await this.prisma.user.findUnique({ where: { id: r.manager_id } });
+      await this.prisma.$executeRaw`
+        INSERT INTO employee_history (user_id, field_name, old_value, new_value, changed_by, effective_date, created_at)
+        VALUES (${r.target_user_id}, 'reportTo', '', ${mgr?.displayName || ''}, ${reviewerId}, CURRENT_DATE, NOW())`;
+    } else if (r.request_type === 'remove_manager' && r.manager_id) {
+      await this.prisma.$executeRaw`
+        DELETE FROM user_managers WHERE user_id = ${r.target_user_id} AND manager_id = ${r.manager_id}`;
+    }
+
+    // Mark approved
+    await this.prisma.$executeRaw`
+      UPDATE team_change_requests SET status = 1, reviewed_by = ${reviewerId}, reviewed_at = NOW() WHERE id = ${id}`;
+
+    // Audit log
+    await this.prisma.$executeRaw`
+      INSERT INTO audit_logs (user_id, action, target_id, details, created_at)
+      VALUES (${reviewerId}, 'approve_team_change', ${r.target_user_id}, ${`Approved ${r.request_type} request #${id}`}, NOW())`;
+
+    return { success: true };
+  }
+
+  async rejectTeamChangeRequest(id: number, reviewerId: number) {
+    await this.prisma.$executeRaw`
+      UPDATE team_change_requests SET status = 2, reviewed_by = ${reviewerId}, reviewed_at = NOW() WHERE id = ${id}`;
+    return { success: true };
+  }
+
+  // Get full employee info with all teams and all managers
+  async getEmployeeFullInfo(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { team: true, designation: true, roles: { include: { role: true } } },
+    });
+    const teamsAndManagers = await this.getUserTeamsAndManagers(userId);
+    return { ...user, allTeams: teamsAndManagers.teams, allManagers: teamsAndManagers.managers };
+  }
+
+  // Get reportee IDs for a manager (used across services)
+  async getReporteeIds(managerId: number): Promise<number[]> {
+    const rows = await this.prisma.$queryRaw<{ user_id: number }[]>`
+      SELECT user_id FROM user_managers WHERE manager_id = ${managerId}`;
+    return rows.map(r => r.user_id);
   }
 }

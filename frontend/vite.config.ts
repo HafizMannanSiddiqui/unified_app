@@ -22,6 +22,16 @@ export default defineConfig({
   server: {
     port: 3002,
     proxy: {
+      // Swagger docs — forward as-is (no rewrite)
+      '/api/docs': {
+        target: `http://localhost:${BACKEND_PORT}`,
+        changeOrigin: true,
+      },
+      '/api/docs-json': {
+        target: `http://localhost:${BACKEND_PORT}`,
+        changeOrigin: true,
+      },
+      // All other API calls — strip /api prefix
       '/api': {
         target: `http://localhost:${BACKEND_PORT}`,
         changeOrigin: true,

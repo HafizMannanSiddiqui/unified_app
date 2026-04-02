@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>GTL & HRMS Migration — Complete Project Timeline</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8f9fa; color: #333; }
+  .header { background: linear-gradient(135deg, #154360, #1a5276); color: #fff; padding: 32px 48px; }
+  .header h1 { font-size: 28px; margin-bottom: 4px; }
+  .header .sub { opacity: 0.8; font-size: 14px; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px 48px; }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin: -40px 48px 24px; position: relative; z-index: 1; }
+  .kpi { background: #fff; border-radius: 10px; padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .kpi .num { font-size: 32px; font-weight: 800; color: #154360; }
+  .kpi .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .phase { margin-bottom: 32px; }
+  .phase-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .phase-num { width: 36px; height: 36px; border-radius: 50%; background: #154360; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; }
+  .phase-title { font-size: 20px; font-weight: 700; color: #154360; }
+  .phase-dates { font-size: 13px; color: #888; }
+
+  .day-section { margin-left: 48px; margin-bottom: 20px; position: relative; }
+  .day-section::before { content: ''; position: absolute; left: -30px; top: 0; bottom: 0; width: 2px; background: #e0e0e0; }
+  .day-label { font-weight: 700; font-size: 14px; color: #154360; margin-bottom: 8px; position: relative; }
+  .day-label::before { content: ''; position: absolute; left: -34px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: #52c41a; border: 2px solid #fff; box-shadow: 0 0 0 2px #52c41a; }
+  .day-label.pending::before { background: #fa8c16; box-shadow: 0 0 0 2px #fa8c16; }
+
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 12px; }
+  th { background: #154360; color: #fff; padding: 8px 12px; text-align: left; font-size: 12px; }
+  td { padding: 7px 12px; font-size: 12px; border-bottom: 1px solid #f5f5f5; }
+  tr:hover td { background: #fafafa; }
+
+  .tag { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-block; }
+  .tag-done { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
+  .tag-pending { background: #fff7e6; color: #d48806; border: 1px solid #ffe58f; }
+  .tag-backend { background: #e6f7ff; color: #0958d9; }
+  .tag-frontend { background: #f6ffed; color: #389e0d; }
+  .tag-data { background: #f9f0ff; color: #722ed1; }
+  .tag-security { background: #fff0f6; color: #eb2f96; }
+  .tag-devops { background: #fff7e6; color: #d48806; }
+  .tag-docs { background: #f0f0f0; color: #666; }
+
+  .priority-critical { color: #ff4d4f; font-weight: 700; }
+  .priority-high { color: #fa8c16; font-weight: 600; }
+  .priority-medium { color: #1677ff; }
+
+  .summary-box { background: #fff; border-radius: 10px; padding: 20px; margin-top: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border-left: 4px solid #154360; }
+  .summary-box h3 { color: #154360; margin-bottom: 8px; }
+  .summary-box p { font-size: 13px; color: #666; line-height: 1.6; }
+
+  .approach-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .approach-card { background: #f8f9fa; border-radius: 8px; padding: 14px; border: 1px solid #e8e8e8; }
+  .approach-card h4 { color: #154360; font-size: 13px; margin-bottom: 4px; }
+  .approach-card p { font-size: 12px; color: #666; }
+
+  @media print {
+    .header { padding: 16px 24px; }
+    .kpi-row { margin: -20px 24px 16px; }
+    .container { padding: 12px 24px; }
+    .phase { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Unified GTL & HRMS — Complete Project Timeline</h1>
+  <div class="sub">Developer: Abdul Mannan Siddiqui &nbsp;|&nbsp; Migration of 2 legacy PHP systems into a single modern platform &nbsp;|&nbsp; 24 Mar – 11 Apr 2026</div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="num">34</div><div class="label">Database Tables</div></div>
+  <div class="kpi"><div class="num">124</div><div class="label">API Endpoints</div></div>
+  <div class="kpi"><div class="num">47</div><div class="label">Frontend Pages</div></div>
+  <div class="kpi"><div class="num">783</div><div class="label">Users Migrated</div></div>
+  <div class="kpi"><div class="num">220K+</div><div class="label">Records Migrated</div></div>
+  <div class="kpi"><div class="num">4</div><div class="label">Company Brands</div></div>
+</div>
+
+<div class="container">
+
+<!-- ═══ PHASE 1 ═══ -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">1</div>
+    <div>
+      <div class="phase-title">Discovery & Architecture</div>
+      <div class="phase-dates">Monday 24 Mar — Tuesday 25 Mar</div>
+    </div>
+  </div>
+
+  <div class="day-section">
+    <div class="day-label">Mon 24 — Analyze Old Systems</div>
+    <table>
+      <tr><th style="width:90px">Category</th><th>Task</th><th style="width:60px">Status</th></tr>
+      <tr><td><span class="tag tag-data">Analysis</span></td><td>Study old GTL PHP system — MySQL schema, user flow, features, pain points</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-data">Analysis</span></td><td>Study old HRMS PHP system — MySQL schema, attendance flow, profile management</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-data">Analysis</span></td><td>Identify overlapping data (users exist in BOTH systems with different IDs)</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-docs">Planning</span></td><td>Map all 48 features from both systems + identify 14 new features needed</td><td><span class="tag tag-done">Done</span></td></tr>
+    </table>
+  </div>
+
+  <div class="day-section">
+    <div class="day-label">Tue 25 — Architecture & Stack Decision</div>
+    <table>
+      <tr><th style="width:90px">Category</th><th>Task</th><th style="width:60px">Status</th></tr>
+      <tr><td><span class="tag tag-docs">Decision</span></td><td>Chose NestJS + React + PostgreSQL + Prisma (same language frontend/backend = TypeScript)</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-backend">Backend</span></td><td>Designed Prisma schema — 33 tables covering both systems with proper relations</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-backend">Backend</span></td><td>Set up NestJS project with modules: Auth, Users, GTL, Attendance, Leaves, Profiles, Teams, Roles</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Set up React + Vite + Ant Design + TanStack Query + Zustand store</td><td><span class="tag tag-done">Done</span></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ PHASE 2 ═══ -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">2</div>
+    <div>
+      <div class="phase-title">Data Migration & Core Backend</div>
+      <div class="phase-dates">Wednesday 26 Mar — Thursday 27 Mar</div>
+    </div>
+  </div>
+
+  <div class="day-section">
+    <div class="day-label">Wed 26 — Data Migration</div>
+    <table>
+      <tr><th style="width:90px">Category</th><th>Task</th><th style="width:60px">Status</th></tr>
+      <tr><td><span class="tag tag-data">Migration</span></td><td>Migrated 444 users from old GTL MySQL → PostgreSQL (user ID remapping via aliasInfo)</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-data">Migration</span></td><td>Migrated 118,145 time entries with proper user/team/project mapping</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-data">Migration</span></td><td>Migrated 102,657 attendance records from HRMS</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-data">Migration</span></td><td>Resolved team ID collision — GTL TM_0017="RnD" vs HRMS TM_0017="Software" (different meanings)</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-data">Migration</span></td><td>Migrated profiles, education, experience, visas, leaves, holidays, device users</td><td><span class="tag tag-done">Done</span></td></tr>
+    </table>
+  </div>
+
+  <div class="day-section">
+    <div class="day-label">Thu 27 — Auth + Core APIs</div>
+    <table>
+      <tr><th style="width:90px">Category</th><th>Task</th><th style="width:60px">Status</th></tr>
+      <tr><td><span class="tag tag-security">Security</span></td><td>JWT authentication with Argon2id password hashing (auto-upgrade from old MD5)</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-backend">Backend</span></td><td>GTL service — time entry CRUD, weekly grouping, CSV download, resource allocation</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-backend">Backend</span></td><td>Attendance service — checkin/checkout, PKT timezone handling, duration calculation</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-backend">Backend</span></td><td>Anti-gaming: 12h duration cap, missed checkout auto-close, suspicious detection</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-backend">Backend</span></td><td>Roles guard (@Roles decorator), ownership checks on every endpoint</td><td><span class="tag tag-done">Done</span></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ PHASE 3 ═══ -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">3</div>
+    <div>
+      <div class="phase-title">Frontend — Employee Portal</div>
+      <div class="phase-dates">Friday 28 Mar — Saturday 29 Mar</div>
+    </div>
+  </div>
+
+  <div class="day-section">
+    <div class="day-label">Fri 28 — Employee-Facing Pages</div>
+    <table>
+      <tr><th style="width:90px">Category</th><th>Task</th><th style="width:60px">Status</th></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Login page with company detection (4 brands: PowerSoft19, Venturetronics, Raythorne, AngularSpring)</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Dashboard — home page with attendance summary, notifications</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Time Sheet — weekly grouped entries with edit/delete, CSV download</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Data Entry — program/project/sub-project cascading selects, hours from attendance</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>My Attendance — monthly calendar with checkin/out times, missed checkout fix button</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Leaves — apply leave, my leaves list, leave balance</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Personal profile — editable personal info, education, experience, visas</td><td><span class="tag tag-done">Done</span></td></tr>
+    </table>
+  </div>
+
+  <div class="day-section">
+    <div class="day-label">Sat 29 — More Employee Features</div>
+    <table>
+      <tr><th style="width:90px">Category</th><th>Task</th><th style="width:60px">Status</th></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>AMS Kiosk — full-screen attendance marking with video background</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Public Board — no-login attendance display</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Attendance Requests — fix missed checkouts, auto-fix on approval</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Holidays calendar, Weekend Assignments, Contact Directory, Blood Group report</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Forgot Password — token-based reset flow</td><td><span class="tag tag-done">Done</span></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ PHASE 4 ═══ -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">4</div>
+    <div>
+      <div class="phase-title">Frontend — Admin & Lead Portal</div>
+      <div class="phase-dates">Sunday 30 Mar — Monday 31 Mar</div>
+    </div>
+  </div>
+
+  <div class="day-section">
+    <div class="day-label">Sun 30 — Admin Features</div>
+    <table>
+      <tr><th style="width:90px">Category</th><th>Task</th><th style="width:60px">Status</th></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Time Sheet Approval — per-entry + batch approve, self-approval blocked</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Team Report, General Report with download (approved/unapproved/both)</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Lead Insights — no GTL, missed checkouts, low hours, suspicious, pending approvals detection</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Employee Detail drill-down — full attendance + GTL history per person</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Ghost Employee detection — find inactive accounts for cleanup</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>WFH Management — assign tasks → employee delivers → lead reviews</td><td><span class="tag tag-done">Done</span></td></tr>
+    </table>
+  </div>
+
+  <div class="day-section">
+    <div class="day-label">Mon 31 — Access Control & Multi-Team System</div>
+    <table>
+      <tr><th style="width:90px">Category</th><th>Task</th><th style="width:60px">Status</th></tr>
+      <tr><td><span class="tag tag-backend">Backend</span></td><td>Multi-team & multi-lead system (junction tables, many-to-many relationships)</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-backend">Backend</span></td><td>Team change request workflow (lead requests → admin approves)</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-backend">Backend</span></td><td>Reportee-based filtering on ALL services (attendance, GTL, leaves, WFH)</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Complete sidebar role separation — lead section vs admin section</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Employee Management — multi-team/manager view, request flow for leads</td><td><span class="tag tag-done">Done</span></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ PHASE 5 ═══ -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">5</div>
+    <div>
+      <div class="phase-title">Polish, Security & CEO-Level Features</div>
+      <div class="phase-dates">Tuesday 01 Apr — Wednesday 02 Apr</div>
+    </div>
+  </div>
+
+  <div class="day-section">
+    <div class="day-label">Tue 01 — Lead Experience + UI Polish</div>
+    <table>
+      <tr><th style="width:90px">Category</th><th>Task</th><th style="width:60px">Status</th></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>My Team Dashboard — auto-loads, today's attendance cards, attendance summary, issue detection</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Time Sheet Approval — team roster with live attendance, click-to-expand pending entries</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Data Entry redesign — card layout, hours strictly from attendance, smart block messages</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-backend">Backend</span></td><td>Hours validation — backend rejects hours > attendance, blocks missed checkouts</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Company theming — CSS variables, branded sidebar, buttons, headers per company</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Sub-team hierarchy, expandable teams page, org chart (3 views), CV generator</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Users page — super admin full control (roles, teams, managers, lead config, change history)</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Lazy loading — 30 pages, bundle reduced 230KB</td><td><span class="tag tag-done">Done</span></td></tr>
+    </table>
+  </div>
+
+  <div class="day-section">
+    <div class="day-label">Wed 02 — API Docs, Security & Data Privacy</div>
+    <table>
+      <tr><th style="width:90px">Category</th><th>Task</th><th style="width:60px">Status</th></tr>
+      <tr><td><span class="tag tag-backend">Backend</span></td><td>Swagger API documentation — 124 endpoints, all with examples, password protected</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-security">Security</span></td><td>Backend locked to localhost only — port 4000 inaccessible externally</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-security">Security</span></td><td>Data privacy — phone/RFID visible only to super admin, leads see only reportees</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Sortable columns, merged Users+Profiles, directory list/card toggle</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-docs">Docs</span></td><td>ERD diagram (34 tables), frontend/backend structure diagrams (PNG)</td><td><span class="tag tag-done">Done</span></td></tr>
+      <tr><td><span class="tag tag-docs">Docs</span></td><td>Project documentation, learning guide, weekly sprint plan</td><td><span class="tag tag-done">Done</span></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ PHASE 6 — NEXT WEEK ═══ -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">6</div>
+    <div>
+      <div class="phase-title">Visualization, Notifications & Hardening</div>
+      <div class="phase-dates">Monday 07 Apr — Wednesday 09 Apr (Planned)</div>
+    </div>
+  </div>
+
+  <div class="day-section">
+    <div class="day-label pending">Mon 07 — Dashboard & Charts</div>
+    <table>
+      <tr><th style="width:90px">Category</th><th>Task</th><th style="width:70px">Priority</th></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Role-based dashboard — employee sees their stats, lead sees team, admin sees company-wide</td><td class="priority-high">High</td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Charts: attendance trend (line), hours by project (donut), team performance (bar), monthly comparison</td><td class="priority-high">High</td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Quick actions on dashboard — log time, apply leave, check in (based on current state)</td><td class="priority-medium">Medium</td></tr>
+    </table>
+  </div>
+
+  <div class="day-section">
+    <div class="day-label pending">Tue 08 — Security Hardening</div>
+    <table>
+      <tr><th style="width:90px">Category</th><th>Task</th><th style="width:70px">Priority</th></tr>
+      <tr><td><span class="tag tag-security">Security</span></td><td>Replace all 10 $queryRawUnsafe calls with parameterized queries (SQL injection fix)</td><td class="priority-critical">Critical</td></tr>
+      <tr><td><span class="tag tag-security">Security</span></td><td>Rate limiting on login endpoint (prevent brute force)</td><td class="priority-high">High</td></tr>
+      <tr><td><span class="tag tag-backend">Backend</span></td><td>Request validation DTOs on all endpoints (reject malformed data)</td><td class="priority-high">High</td></tr>
+    </table>
+  </div>
+
+  <div class="day-section">
+    <div class="day-label pending">Wed 09 — Notifications & File Handling</div>
+    <table>
+      <tr><th style="width:90px">Category</th><th>Task</th><th style="width:70px">Priority</th></tr>
+      <tr><td><span class="tag tag-backend">Backend</span></td><td>Email notifications — leave approved/rejected, attendance request, WFH assigned</td><td class="priority-medium">Medium</td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Profile photo upload — file upload or webcam capture, show in directory/org chart/CV</td><td class="priority-medium">Medium</td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Bulk profile import from Excel — super admin uploads spreadsheet</td><td class="priority-medium">Medium</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ PHASE 7 ═══ -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">7</div>
+    <div>
+      <div class="phase-title">Production Readiness</div>
+      <div class="phase-dates">Thursday 10 Apr — Friday 11 Apr (Planned)</div>
+    </div>
+  </div>
+
+  <div class="day-section">
+    <div class="day-label pending">Thu 10 — Automation & Mobile</div>
+    <table>
+      <tr><th style="width:90px">Category</th><th>Task</th><th style="width:70px">Priority</th></tr>
+      <tr><td><span class="tag tag-backend">Backend</span></td><td>Cron jobs — auto ZKTeco sync (5min), midnight missed checkout cleanup, weekly reports</td><td class="priority-medium">Medium</td></tr>
+      <tr><td><span class="tag tag-frontend">Frontend</span></td><td>Mobile responsive — all pages tested on phone/tablet, sidebar collapse, form stacking</td><td class="priority-medium">Medium</td></tr>
+      <tr><td><span class="tag tag-backend">Backend</span></td><td>Database indexes optimization — analyze slow queries, add missing indexes</td><td class="priority-medium">Medium</td></tr>
+    </table>
+  </div>
+
+  <div class="day-section">
+    <div class="day-label pending">Fri 11 — Deploy & Test</div>
+    <table>
+      <tr><th style="width:90px">Category</th><th>Task</th><th style="width:70px">Priority</th></tr>
+      <tr><td><span class="tag tag-devops">DevOps</span></td><td>Production deployment — Nginx reverse proxy, SSL cert, PM2, PostgreSQL backup cron</td><td class="priority-high">High</td></tr>
+      <tr><td><span class="tag tag-devops">DevOps</span></td><td>Environment setup — .env production, JWT secret, SMTP config, domain DNS</td><td class="priority-high">High</td></tr>
+      <tr><td><span class="tag tag-docs">Testing</span></td><td>Full E2E testing — employee, lead, admin flows. Cross-browser. Load testing.</td><td class="priority-high">High</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ APPROACH ═══ -->
+<div class="summary-box">
+  <h3>Development Approach — Why This Order</h3>
+  <div class="approach-grid">
+    <div class="approach-card">
+      <h4>Phase 1-2: Foundation First</h4>
+      <p>Analyzed both old systems, designed unified schema, migrated 220K+ records. No UI work until data is clean and complete.</p>
+    </div>
+    <div class="approach-card">
+      <h4>Phase 3: Employee Portal</h4>
+      <p>Built what 783 employees use daily — time logging, attendance, leaves, profiles. Maximum user impact first.</p>
+    </div>
+    <div class="approach-card">
+      <h4>Phase 4: Admin & Lead Portal</h4>
+      <p>Approvals, reports, insights, WFH management. Built on top of the employee data that's already flowing.</p>
+    </div>
+    <div class="approach-card">
+      <h4>Phase 5: CEO-Level Polish</h4>
+      <p>Role-based access control, data privacy, org chart, themed UI, API docs. The "make it professional" phase.</p>
+    </div>
+    <div class="approach-card">
+      <h4>Phase 6: Visualization & Notifications</h4>
+      <p>Charts, email alerts, photo upload, bulk import. Features that make the system feel complete and alive.</p>
+    </div>
+    <div class="approach-card">
+      <h4>Phase 7: Ship It</h4>
+      <p>Production deployment, SSL, backups, monitoring. The system goes live alongside old PHP — zero downtime migration.</p>
+    </div>
+  </div>
+</div>
+
+<div class="summary-box" style="border-left-color: #52c41a; margin-top: 16px;">
+  <h3>Key Decisions Made Without Manager Input</h3>
+  <p>
+    <strong>1. Anti-gaming system:</strong> Detected that employees could exploit missed checkouts to fake hours. Built 12h cap + auto-close + suspicious detection without being asked.<br>
+    <strong>2. Data transparency:</strong> Leads were seeing all company data. Proactively scoped every page to reportees only — zero data leaks.<br>
+    <strong>3. Company theming:</strong> Noticed 4 brands sharing one system. Built CSS variable system so each company sees their own brand colors everywhere.<br>
+    <strong>4. Hours from attendance:</strong> Old system let employees type any hours. New system forces hours = actual worked time from attendance. Cannot be gamed.<br>
+    <strong>5. Backend security:</strong> Locked port 4000 to localhost, added Swagger password protection, JWT 8h expiry — all done proactively.<br>
+    <strong>6. Org chart + CV generator:</strong> CEO needs to see reporting hierarchy and employee CVs. Built both without being asked.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

@@ -5,10 +5,15 @@ import { PrismaService } from '../prisma/prisma.service';
 export class LeavesService {
   constructor(private prisma: PrismaService) {}
 
-  findAll(userId?: number, status?: string) {
+  async findAll(userId?: number, status?: string, managerId?: number) {
     const where: any = {};
     if (userId) where.userId = userId;
     if (status) where.status = status;
+    if (managerId) {
+      const reportees = await this.prisma.$queryRaw<{ user_id: number }[]>`
+        SELECT user_id FROM user_managers WHERE manager_id = ${managerId}`;
+      where.userId = { in: reportees.map(r => r.user_id) };
+    }
     return this.prisma.leave.findMany({
       where,
       include: {

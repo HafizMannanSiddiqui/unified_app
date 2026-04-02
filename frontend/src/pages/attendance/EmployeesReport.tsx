@@ -5,18 +5,22 @@ import { useState } from 'react';
 import dayjs from 'dayjs';
 import { getEmployeesReport } from '../../api/attendance';
 import { getTeams } from '../../api/teams';
+import { useAuthStore } from '../../store/authStore';
 
 const { RangePicker } = DatePicker;
+const ADMIN_ROLES = ['super admin', 'Admin', 'Application Manager'];
 
 export default function EmployeesReport() {
   const now = dayjs();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.roles?.some((r: any) => ADMIN_ROLES.includes(r.name));
   const [range, setRange] = useState<[string, string]>([now.startOf('month').format('YYYY-MM-DD'), now.format('YYYY-MM-DD')]);
   const [teamId, setTeamId] = useState<number | undefined>();
   const [submitted, setSubmitted] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['empReport', range, teamId],
-    queryFn: () => getEmployeesReport(range[0], range[1], teamId),
+    queryKey: ['empReport', range, teamId, isAdmin ? 'admin' : user?.id],
+    queryFn: () => getEmployeesReport(range[0], range[1], isAdmin ? teamId : undefined, isAdmin ? undefined : user?.id),
     enabled: submitted,
   });
 

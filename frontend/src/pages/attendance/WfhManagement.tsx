@@ -1,24 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Select, DatePicker, Button, message, Card, Tag, Input, Spin, Modal, Form, Row, Col } from 'antd';
-import { HomeOutlined, CheckOutlined, SearchOutlined, EditOutlined } from '@ant-design/icons';
+import { Select, DatePicker, Button, message, Tag, Input, Spin, Modal, Form } from 'antd';
+import { HomeOutlined, CheckOutlined, EditOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import dayjs from 'dayjs';
 import apiClient from '../../api/client';
-import { getUsers } from '../../api/users';
-import { getTeams } from '../../api/teams';
 import { useAuthStore } from '../../store/authStore';
 
-const { RangePicker } = DatePicker;
 const assignWfh = (data: any) => apiClient.post('/attendance/wfh/assign', data).then(r => r.data);
 const getWfhRecords = (params: any) => apiClient.get('/attendance/wfh/records', { params }).then(r => r.data);
 const submitDeliverables = (data: any) => apiClient.post('/attendance/wfh/submit-deliverables', data).then(r => r.data);
 const reviewWfh = (data: any) => apiClient.post('/attendance/wfh/review', data).then(r => r.data);
+const getMyReportees = (managerId: number) => apiClient.get('/users/my-team-members', { params: { managerId } }).then(r => r.data);
 
 const LEAD_ROLES = ['super admin', 'Admin', 'Application Manager', 'Team Lead', 'Hr Manager'];
+const ADMIN_ROLES = ['super admin', 'Admin', 'Application Manager'];
 
 export default function WfhManagement() {
   const user = useAuthStore((s) => s.user);
   const isLead = user?.roles?.some((r: any) => LEAD_ROLES.includes(r.name));
+  const isAdmin = user?.roles?.some((r: any) => ADMIN_ROLES.includes(r.name));
   const qc = useQueryClient();
   const now = dayjs();
 
@@ -28,13 +28,23 @@ export default function WfhManagement() {
   const [deliverForm] = Form.useForm();
   const [reviewModal, setReviewModal] = useState<any>(null);
   const [reviewForm] = Form.useForm();
-  const [teamFilter, setTeamFilter] = useState<number | undefined>();
 
-  const { data: users } = useQuery({ queryKey: ['usersAll'], queryFn: () => getUsers(1, 1000) });
-  const { data: teams } = useQuery({ queryKey: ['teams'], queryFn: () => getTeams() });
+  // For leads: only their reportees. For admins: use managerId to scope
+  const { data: reportees } = useQuery({
+    queryKey: ['myReportees', user?.id],
+    queryFn: () => getMyReportees(user!.id),
+    enabled: isLead && !!user?.id,
+  });
+
+  // WFH records — leads see only their reportees, employees see only their own
   const { data: records, isLoading } = useQuery({
-    queryKey: ['wfhRecords', teamFilter, user?.id],
-    queryFn: () => getWfhRecords({ from: now.startOf('month').format('YYYY-MM-DD'), to: now.endOf('month').format('YYYY-MM-DD'), teamId: teamFilter, userId: isLead ? undefined : user?.id }),
+    queryKey: ['wfhRecords', user?.id, isAdmin],
+    queryFn: () => getWfhRecords({
+      from: now.startOf('month').format('YYYY-MM-DD'),
+      to: now.endOf('month').format('YYYY-MM-DD'),
+      managerId: isLead && !isAdmin ? user?.id : undefined,
+      userId: !isLead ? user?.id : undefined,
+    }),
   });
 
   const assignMut = useMutation({
@@ -63,8 +73,6 @@ export default function WfhManagement() {
       <div className="page-header">
         <div className="page-title"><HomeOutlined style={{ marginRight: 8 }} />Work From Home</div>
         <div className="page-filters">
-          {isLead && <Select placeholder="All Teams" allowClear style={{ width: 180 }} onChange={setTeamFilter}
-            options={(teams || []).map((t: any) => ({ label: t.teamName, value: t.id }))} />}
           {isLead && <Button type="primary" icon={<HomeOutlined />} onClick={() => setAssignModal(true)}
             style={{ background: '#154360', borderColor: '#154360', borderRadius: 20 }}>Assign WFH</Button>}
         </div>
@@ -119,13 +127,13 @@ export default function WfhManagement() {
         </div>
       )}
 
-      {/* Assign WFH Modal */}
+      {/* Assign WFH Modal — only shows reportees */}
       <Modal title="Assign Work From Home" open={assignModal} onCancel={() => setAssignModal(false)}
         onOk={() => assignForm.submit()} confirmLoading={assignMut.isPending}>
         <Form form={assignForm} onFinish={(v: any) => assignMut.mutate(v)} layout="vertical" className="clean-form" style={{ marginTop: 16 }}>
           <Form.Item name="userId" label="Employee" rules={[{ required: true }]}>
             <Select showSearch optionFilterProp="label" placeholder="Select employee..."
-              options={(users?.items || []).filter((u: any) => u.isActive).map((u: any) => ({ label: `${u.displayName || u.username} (${u.team?.teamName || ''})`, value: u.id }))} />
+              options={(reportees || []).map((u: any) => ({ label: `${u.displayName || u.username} — ${u.teamName || ''}`, value: u.id }))} />
           </Form.Item>
           <Form.Item name="date" label="WFH Date" rules={[{ required: true }]}>
             <DatePicker style={{ width: '100%' }} disabledDate={(c) => c && c.isBefore(dayjs(), 'day')} />
