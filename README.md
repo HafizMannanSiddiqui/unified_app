@@ -52,9 +52,7 @@ npm --version
 
 ---
 
-## Step-by-Step Setup (First Time Only)
-
-Follow these steps **in order**. Each step depends on the previous one.
+## Setup (First Time Only — 3 Steps)
 
 ### Step 1: Extract the ZIP
 
@@ -63,124 +61,68 @@ Extract the `unified_app` folder to any location on the PC. For example:
 C:\Projects\unified_app\
 ```
 
-### Step 2: Create the Database
+### Step 2: Check PostgreSQL Connection
 
-Open **pgAdmin** (installed with PostgreSQL) or use the command line:
+The app needs PostgreSQL running. If you already have pgAdmin4 with projects running, you're good.
 
-**Option A: Using pgAdmin (GUI)**
-1. Open pgAdmin from Start Menu
-2. Connect to your local PostgreSQL server
-3. Right-click on "Databases" > "Create" > "Database"
-4. Name it: `unified_app`
-5. Click Save
-
-**Option B: Using Command Line**
-```
-psql -U postgres -p 5433
-```
-Enter your PostgreSQL password when prompted, then:
-```sql
-CREATE DATABASE unified_app;
-\q
-```
-
-### Step 3: Configure the Database Connection
-
-Open this file in any text editor (Notepad works):
+Open this file in Notepad to check/update the database connection:
 ```
 unified_app\backend-nest\.env
 ```
 
-It should look like this:
+> **If this file doesn't exist, don't worry** — it will be created automatically when you run the app.
+
+If it exists, verify these match YOUR PostgreSQL setup:
 ```
 DATABASE_URL=postgresql://postgres:angular123@localhost:5433/unified_app
-JWT_SECRET=dev-secret-key-change-in-production
-JWT_EXPIRES_IN=8h
-PORT=4000
 ```
+- `postgres` = your PostgreSQL username (usually `postgres`)
+- `angular123` = your PostgreSQL password
+- `5433` = your PostgreSQL port (check pgAdmin — common ports are `5432` or `5433`)
+- `unified_app` = database name (will be auto-created)
 
-**Update if needed:**
-- `postgres` = your PostgreSQL username (default is `postgres`)
-- `angular123` = your PostgreSQL password (whatever you set during install)
-- `5433` = your PostgreSQL port (default is `5432`, we use `5433`)
-- `unified_app` = the database name from Step 2
+### Step 3: Run
 
-### Step 4: Install Backend Dependencies
-
-Open a terminal/command prompt. Navigate to the backend folder:
-```
-cd C:\Projects\unified_app\backend-nest
-npm install
-```
-
-This downloads all the backend libraries. Wait for it to finish (may take 2-5 minutes the first time).
-
-### Step 5: Create Database Tables
-
-Still in the `backend-nest` folder:
-```
-npx prisma db push
-```
-
-This creates all 34 database tables. You should see:
-```
-Your database is now in sync with your Prisma schema.
-```
-
-Then generate the Prisma client:
-```
-npx prisma generate
-```
-
-### Step 6: Import Data (if you have a database dump)
-
-If you have a `.sql` dump file with existing data:
-```
-psql -U postgres -p 5433 -d unified_app -f path\to\dump.sql
-```
-
-If you're starting fresh (no data), skip this step. The app will work with empty tables.
-
-### Step 7: Install Frontend Dependencies
-
+Open a terminal/command prompt:
 ```
 cd C:\Projects\unified_app\frontend
-npm install
-```
-
-Wait for it to finish.
-
-### Step 8: Run the Application
-
-Still in the `frontend` folder:
-```
 npm run dev
 ```
 
-**This single command starts EVERYTHING:**
-- Backend API server on port 4000
-- Frontend web server on port 3002
-- Automatically installs any missing packages
+**That's it. This single command automatically:**
+1. Installs all backend dependencies
+2. Installs all frontend dependencies
+3. Creates the `.env` config file (if missing)
+4. Creates the `unified_app` database (if it doesn't exist)
+5. Creates all 34 database tables
+6. Generates the Prisma client
+7. Starts the backend API server (port 4000)
+8. Starts the frontend web server (port 3002)
 
-You should see output like:
+First run takes 2-5 minutes (downloading packages). After that, it starts in ~10 seconds.
+
+You should see:
 ```
+[API] === GTL & HRMS Auto-Setup ===
+[API] Database 'unified_app' already exists.
+[API] Database tables are in sync.
+[API] Prisma client ready.
 [API] Nest application successfully started
 [WEB] VITE v5.x.x ready in xxx ms
 [WEB] Local: http://localhost:3002/
 ```
 
-### Step 9: Open in Browser
+Open **http://localhost:3002** in your browser.
 
-Open your web browser and go to:
+**Default login:** `abdul.mannan` / `welcome`
+
+### Importing Data (Optional)
+
+If you have a `.sql` database dump with existing employee data:
 ```
-http://localhost:3002
+psql -U postgres -p 5433 -d unified_app -f path\to\dump.sql
 ```
-
-You should see the login page.
-
-**Default login credentials:**
-- Username: `abdul.mannan` (super admin)
-- Password: `welcome`
+Or import it via pgAdmin4: right-click the `unified_app` database > Restore.
 
 ---
 

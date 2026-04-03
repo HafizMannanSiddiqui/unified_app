@@ -5,7 +5,7 @@
   "scripts": {
     "build": "nest build",
     "start": "nest start",
-    "predev": "npm install --prefer-offline --silent && npx prisma generate --no-hints",
+    "predev": "npm install --prefer-offline --silent && node scripts/auto-setup.js",
     "dev": "nest start --watch --builder swc",
     "prisma:generate": "prisma generate",
     "prisma:pull": "prisma db pull",
